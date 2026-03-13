@@ -520,3 +520,29 @@
 ---
 
 **持续更新中...**
+
+
+### 2026-03-13 - 富文本编辑器功能验证与完善
+- ✅ **验证富文本编辑器完整功能**
+  - 后端 API 验证：
+    - POST /api/upload/image - 图片上传接口正常工作
+    - POST /api/upload/attachment - 附件上传接口正常工作
+    - GET /api/notes/{id}/attachments - 附件列表接口正常工作
+    - DELETE /api/attachments/{id} - 附件删除接口正常工作
+    - /uploads 静态文件服务正常挂载
+  
+  - 前端功能验证：
+    - TipTap.js v2.2+ 编辑器核心正确加载
+    - StarterKit 扩展（标题、列表、代码块等）正常工作
+    - Image 扩展支持图片拖拽上传和点击上传
+    - Table 扩展支持表格插入和编辑
+    - TaskList 扩展支持可勾选任务项
+    - Highlight 扩展支持文本高亮
+    - Link 扩展支持超链接
+    - Placeholder 扩展提供占位提示
+  
+  - 撤销重做功能验证：
+    - 工具栏撤销/重做按钮正常工作
+    - 快捷键 Ctrl+Z 撤销功能正常
+    - 快捷键 Ctrl+Y 重做功能正常
+    - 按钮状态根据历史栈自动更新
