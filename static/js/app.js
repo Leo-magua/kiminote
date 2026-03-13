@@ -100,7 +100,7 @@ const elements = {
     saveBtn: document.getElementById('saveBtn'),
     deleteBtn: document.getElementById('deleteBtn'),
     noteTitle: document.getElementById('noteTitle'),
-    noteContent: document.getElementById('noteContent'),
+    noteContent: document.getElementById('markdownContent'),  // Fallback textarea for markdown
     previewContent: document.getElementById('previewContent'),
     tabBtns: document.querySelectorAll('.tab-btn'),
     editTab: document.getElementById('editTab'),

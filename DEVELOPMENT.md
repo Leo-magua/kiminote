@@ -225,17 +225,20 @@
       - `DELETE /api/attachments/{id}` - 删除附件
     - 配置文件类型验证和大小限制
     - 集成 Pillow 用于图片尺寸检测
+    - 添加附件相关 Pydantic 模型（ImageUploadResponse, AttachmentUploadResponse 等）
   
   - **前端实现**：
     - **TipTap.js 编辑器集成**（`editor.js`）
       - 使用 TipTap v2.2+ 核心和扩展
-      - StarterKit 提供基础编辑功能
+      - StarterKit 提供基础编辑功能（标题、列表、代码块等）
       - Image 扩展支持图片插入和 Base64 预览
-      - Table 扩展支持表格编辑
+      - Table/TableRow/TableCell/TableHeader 扩展支持表格编辑
       - TaskList/TaskItem 扩展支持任务列表
       - Highlight 扩展支持文本高亮
       - Link 扩展支持超链接
       - Placeholder 扩展提供占位提示
+      - Typography 扩展提供排版优化
+      - HorizontalRule 扩展支持分隔线
     
     - **图片上传功能**
       - 点击工具栏图片按钮选择文件
@@ -299,6 +302,9 @@
     - 拖拽上传视觉反馈
       - 拖拽时高亮边框
       - 背景色变化
+  
+  - **代码修复**：
+    - 修复 `app.js` 中 `noteContent` 元素引用问题，确保与编辑器正确集成
 
 ### 2026-03-13 - 富文本编辑器
 - ✅ **添加富文本编辑器功能**
