@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>📝 {{ app_name }}</h1>
+                <div class="ai-status {{ 'ai-available' if ai_available else 'ai-unavailable' }}">
+                    {{ 'AI 已启用' if ai_available else 'AI 未配置' }}
+                </div>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索笔记...">
+                <button id="smartSearchBtn" class="btn-icon" title="AI 智能搜索">🔍</button>
+            </div>
+            
+            <button id="newNoteBtn" class="btn-primary">
+                <span>+</span> 新建笔记
+            </button>
+            
+            <div class="tags-section">
+                <h3>🏷️ 标签</h3>
+                <div id="tagsList" class="tags-list"></div>
+            </div>
+            
+            <div class="stats-section">
+                <span id="notesCount">0 笔记</span>
+            </div>
+            
+            <div class="export-section">
+                <h3>📤 导出</h3>
+                <button id="exportJsonBtn" class="btn-secondary">导出 JSON</button>
+                <button id="exportMdBtn" class="btn-secondary">导出 Markdown</button>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Notes List View -->
+            <div id="notesListView" class="view">
+                <div class="view-header">
+                    <h2>所有笔记</h2>
+                    <div class="view-actions">
+                        <select id="sortSelect">
+                            <option value="updated">最近更新</option>
+                            <option value="created">最近创建</option>
+                            <option value="title">标题</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="notesList" class="notes-grid"></div>
+            </div>
+            
+            <!-- Note Edit View -->
+            <div id="noteEditView" class="view hidden">
+                <div class="view-header">
+                    <button id="backBtn" class="btn-text">← 返回</button>
+                    <div class="view-actions">
+                        <button id="previewBtn" class="btn-secondary">预览</button>
+                        <button id="aiEnhanceBtn" class="btn-ai" style="display: none;">AI 增强</button>
+                        <button id="saveBtn" class="btn-primary">保存</button>
+                        <button id="deleteBtn" class="btn-danger">删除</button>
+                    </div>
+                </div>
+                
+                <div class="editor-container">
+                    <input type="text" id="noteTitle" placeholder="笔记标题..." class="title-input">
+                    
+                    <div class="editor-tabs">
+                        <button class="tab-btn active" data-tab="edit">编辑</button>
+                        <button class="tab-btn" data-tab="preview">预览</button>
+                    </div>
+                    
+                    <div class="editor-content">
+                        <div id="editTab" class="tab-content active">
+                            <textarea id="noteContent" placeholder="在这里输入 Markdown 格式的内容...
+
+支持语法:
+# 标题1
+## 标题2
+**粗体** *斜体* `代码`
+- 列表项1
+- 列表项2
+> 引用"></textarea>
+                        </div>
+                        <div id="previewTab" class="tab-content markdown-preview">
+                            <div id="previewContent"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="note-meta">
+                        <div id="noteTags" class="note-tags-display"></div>
+                        <div id="noteSummary" class="note-summary"></div>
+                        <div id="noteDates" class="note-dates"></div>
+                    </div>
+                    
+                    <div class="ai-actions" id="aiActions" style="display: none;">
+                        <button id="generateSummaryBtn" class="btn-ai-action">生成摘要</button>
+                        <button id="generateTagsBtn" class="btn-ai-action">生成标签</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Smart Search Results View -->
+            <div id="searchResultsView" class="view hidden">
+                <div class="view-header">
+                    <button id="closeSearchBtn" class="btn-text">← 返回</button>
+                    <h2>AI 搜索结果</h2>
+                </div>
+                <div id="searchQuery" class="search-query"></div>
+                <div id="searchResults" class="notes-list"></div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Smart Search Modal -->
+    <div id="smartSearchModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>AI 智能搜索</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="hint">描述你想找的内容，AI 将理解你的意图并查找相关笔记</p>
+                <input type="text" id="smartSearchInput" placeholder="例如：关于项目管理的笔记">
+                <button id="doSmartSearch" class="btn-primary">搜索</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Enhance Modal -->
+    <div id="aiEnhanceModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>AI 文本增强</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="hint">选择增强方式：</p>
+                <select id="enhanceInstruction">
+                    <option value="improve">改进写作</option>
+                    <option value="simplify">简化内容</option>
+                    <option value="professional">专业化</option>
+                    <option value="creative">创意写作</option>
+                    <option value="expand">扩展内容</option>
+                </select>
+                <button id="doEnhance" class="btn-primary">增强</button>
+                <div id="enhanceResult" class="enhance-result"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+    
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
