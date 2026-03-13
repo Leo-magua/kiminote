@@ -1170,3 +1170,394 @@ elements.statsModal.addEventListener('click', (e) => {
         toggleModal(elements.statsModal, false);
     }
 });
+
+
+// ========== Rich Text Editor Integration ==========
+
+let richTextEditor = null;
+let currentAttachments = [];
+
+// Initialize rich text editor
+function initRichTextEditor() {
+    // Check if TipTap is available
+    if (typeof tiptap === 'undefined') {
+        console.warn('TipTap not loaded, falling back to textarea');
+        return;
+    }
+    
+    // Create editor instance
+    richTextEditor = new RichTextEditor({
+        element: document.getElementById('editor'),
+        onChange: (html) => {
+            // Sync with markdown tab if needed
+            syncMarkdownFromHTML(html);
+        },
+        onImageUpload: async (file) => {
+            return await uploadImageFile(file);
+        },
+        onAttachmentUpload: async (file) => {
+            return await uploadAttachmentFile(file);
+        }
+    });
+}
+
+// Upload image file
+async function uploadImageFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData
+    });
+    
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
+    
+    const result = await response.json();
+    return result.url;
+}
+
+// Upload attachment file
+async function uploadAttachmentFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('/api/upload/attachment', {
+        method: 'POST',
+        body: formData
+    });
+    
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
+    
+    const result = await response.json();
+    
+    // Store attachment info
+    currentAttachments.push({
+        id: result.id,
+        filename: result.original_filename,
+        size: result.file_size,
+        url: result.url,
+        type: result.file_type
+    });
+    
+    renderAttachmentList();
+    
+    return {
+        id: result.id,
+        filename: result.original_filename,
+        size: result.file_size,
+        url: result.url
+    };
+}
+
+// Render attachment list
+function renderAttachmentList() {
+    let container = document.getElementById('attachmentList');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'attachmentList';
+        container.className = 'attachment-list';
+        document.querySelector('.editor-container').insertBefore(
+            container, 
+            document.querySelector('.note-meta')
+        );
+    }
+    
+    if (currentAttachments.length === 0) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="attachment-section">
+            <h4>📎 附件 (${currentAttachments.length})</h4>
+            <div class="attachment-items">
+                ${currentAttachments.map(att => `
+                    <div class="attachment-item" data-id="${att.id}">
+                        <span class="attachment-icon">${getFileIcon(att.filename)}</span>
+                        <span class="attachment-name">${escapeHtml(att.filename)}</span>
+                        <span class="attachment-size">${formatFileSize(att.size)}</span>
+                        <button class="attachment-remove" data-id="${att.id}" title="删除">×</button>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    // Add remove handlers
+    container.querySelectorAll('.attachment-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = parseInt(btn.dataset.id);
+            currentAttachments = currentAttachments.filter(a => a.id !== id);
+            renderAttachmentList();
+        });
+    });
+}
+
+// Get file icon based on extension
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': '📄',
+        'doc': '📝', 'docx': '📝',
+        'xls': '📊', 'xlsx': '📊',
+        'ppt': '📈', 'pptx': '📈',
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'webp': '🖼️', 'svg': '🖼️',
+        'mp4': '🎬', 'avi': '🎬', 'mov': '🎬',
+        'mp3': '🎵', 'wav': '🎵',
+        'zip': '📦', 'rar': '📦', '7z': '📦',
+        'txt': '📃', 'md': '📃',
+        'json': '⚙️', 'js': '⚙️', 'py': '⚙️', 'html': '⚙️', 'css': '⚙️'
+    };
+    return icons[ext] || '📎';
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Sync markdown from HTML
+function syncMarkdownFromHTML(html) {
+    // Only update markdown tab if Turndown is available
+    if (typeof TurndownService !== 'undefined') {
+        const turndown = new TurndownService({
+            headingStyle: 'atx',
+            codeBlockStyle: 'fenced'
+        });
+        const markdown = turndown.turndown(html);
+        const mdTextarea = document.getElementById('markdownContent');
+        if (mdTextarea) {
+            mdTextarea.value = markdown;
+        }
+    }
+}
+
+// Sync HTML from markdown
+function syncHTMLFromMarkdown() {
+    const mdTextarea = document.getElementById('markdownContent');
+    if (mdTextarea && richTextEditor && typeof marked !== 'undefined') {
+        const markdown = mdTextarea.value;
+        const html = marked.parse(markdown);
+        richTextEditor.setHTML(html);
+    }
+}
+
+// Get editor content (for saving)
+function getEditorContent() {
+    if (richTextEditor && richTextEditor.isReady()) {
+        // Convert HTML to Markdown for storage
+        const html = richTextEditor.getHTML();
+        if (typeof TurndownService !== 'undefined') {
+            const turndown = new TurndownService({
+                headingStyle: 'atx',
+                codeBlockStyle: 'fenced'
+            });
+            // Add rule for task lists
+            turndown.addRule('taskList', {
+                filter: function (node) {
+                    return node.type === 'checkbox' && node.parentNode.nodeName === 'LI';
+                },
+                replacement: function (content, node) {
+                    return (node.checked ? '[x]' : '[ ]') + ' ';
+                }
+            });
+            return turndown.turndown(html);
+        }
+        return html;
+    }
+    return elements.noteContent ? elements.noteContent.value : '';
+}
+
+// Set editor content (when loading note)
+function setEditorContent(markdown) {
+    if (richTextEditor && richTextEditor.isReady()) {
+        // Convert Markdown to HTML
+        if (typeof marked !== 'undefined') {
+            const html = marked.parse(markdown);
+            richTextEditor.setHTML(html);
+        } else {
+            richTextEditor.setHTML(markdown);
+        }
+    }
+    // Also update textarea as fallback
+    if (elements.noteContent) {
+        elements.noteContent.value = markdown;
+    }
+    // Update markdown tab
+    const mdTextarea = document.getElementById('markdownContent');
+    if (mdTextarea) {
+        mdTextarea.value = markdown;
+    }
+}
+
+// Load note attachments
+async function loadNoteAttachments(noteId) {
+    try {
+        const result = await api.get(`/api/notes/${noteId}/attachments`);
+        currentAttachments = result.attachments.map(att => ({
+            id: att.id,
+            filename: att.original_filename,
+            size: att.file_size,
+            url: att.url,
+            type: att.file_type
+        }));
+        renderAttachmentList();
+    } catch (error) {
+        console.error('Failed to load attachments:', error);
+        currentAttachments = [];
+        renderAttachmentList();
+    }
+}
+
+// Override openNote to use editor
+const originalOpenNote = openNote;
+openNote = async function(id) {
+    try {
+        currentNote = await api.get(`/api/notes/${id}`);
+        
+        elements.noteTitle.value = currentNote.title;
+        
+        // Set editor content
+        setEditorContent(currentNote.content);
+        
+        renderNoteMeta();
+        
+        // Show AI actions if available
+        elements.aiActions.style.display = isAiAvailable ? 'flex' : 'none';
+        elements.aiEnhanceBtn.style.display = isAiAvailable ? 'inline-block' : 'none';
+        
+        // Show share button
+        elements.shareBtn.style.display = 'inline-block';
+        
+        // Load attachments
+        await loadNoteAttachments(id);
+        
+        showView('edit');
+        updatePreview();
+    } catch (error) {
+        showToast('加载笔记失败: ' + error.message, 'error');
+    }
+};
+
+// Override createNewNote to use editor
+const originalCreateNewNote = createNewNote;
+createNewNote = function() {
+    currentNote = null;
+    elements.noteTitle.value = '';
+    
+    // Clear editor
+    setEditorContent('');
+    
+    // Clear attachments
+    currentAttachments = [];
+    renderAttachmentList();
+    
+    elements.noteTags.innerHTML = '';
+    elements.noteSummary.innerHTML = '';
+    elements.noteDates.innerHTML = '';
+    elements.aiActions.style.display = isAiAvailable ? 'flex' : 'none';
+    elements.aiEnhanceBtn.style.display = isAiAvailable ? 'inline-block' : 'none';
+    
+    // Hide share button for new notes
+    elements.shareBtn.style.display = 'none';
+    
+    showView('edit');
+    elements.noteTitle.focus();
+};
+
+// Override saveNote to use editor content
+const originalSaveNote = saveNote;
+saveNote = async function() {
+    const title = elements.noteTitle.value.trim();
+    const content = getEditorContent();
+    
+    if (!title) {
+        showToast('请输入标题', 'error');
+        return;
+    }
+    
+    try {
+        if (currentNote) {
+            // Update existing
+            const result = await api.put(`/api/notes/${currentNote.id}`, { title, content });
+            currentNote = result;
+            showToast('笔记已更新');
+        } else {
+            // Create new
+            const result = await api.post('/api/notes', { title, content });
+            currentNote = result;
+            showToast('笔记已创建');
+        }
+        
+        // Reload notes
+        await loadNotes();
+        renderNoteMeta();
+    } catch (error) {
+        showToast('保存失败: ' + error.message, 'error');
+    }
+};
+
+// Override updatePreview to use editor content
+const originalUpdatePreview = updatePreview;
+updatePreview = function() {
+    const content = getEditorContent();
+    
+    // Parse markdown
+    let html = marked.parse(content);
+    
+    // Sanitize HTML to prevent XSS attacks
+    if (typeof DOMPurify !== 'undefined') {
+        html = DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
+    }
+    
+    elements.previewContent.innerHTML = html;
+    
+    // Apply syntax highlighting
+    elements.previewContent.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+    });
+};
+
+// Tab switching for editor tabs
+const originalTabBtns = elements.tabBtns;
+if (originalTabBtns) {
+    originalTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            
+            // Sync content between tabs
+            if (tab === 'markdown') {
+                syncMarkdownFromHTML(richTextEditor.getHTML());
+            } else if (tab === 'edit' && richTextEditor) {
+                const mdTextarea = document.getElementById('markdownContent');
+                if (mdTextarea) {
+                    const html = marked.parse(mdTextarea.value);
+                    richTextEditor.setHTML(html);
+                }
+            }
+        });
+    });
+}
+
+// Initialize editor after page load
+document.addEventListener('DOMContentLoaded', () => {
+    initRichTextEditor();
+});
+
+// Also try to initialize immediately in case DOM is already loaded
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initRichTextEditor();
+}

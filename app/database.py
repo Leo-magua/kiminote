@@ -281,6 +281,56 @@ class CollaborationSession(Base):
         }
 
 
+class Attachment(Base):
+    """File attachments for notes"""
+    __tablename__ = "attachments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # File info
+    filename = Column(String(255), nullable=False)
+    original_filename = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(Integer, nullable=False)  # in bytes
+    mime_type = Column(String(100), nullable=False)
+    
+    # File type category
+    file_type = Column(String(20), nullable=False)  # image, document, video, audio, other
+    
+    # For images
+    width = Column(Integer, nullable=True)
+    height = Column(Integer, nullable=True)
+    
+    # Access URL
+    url_path = Column(String(255), unique=True, nullable=False, index=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    note = relationship("Note")
+    user = relationship("User")
+    
+    def to_dict(self) -> dict:
+        """Convert attachment to dictionary"""
+        return {
+            "id": self.id,
+            "note_id": self.note_id,
+            "user_id": self.user_id,
+            "filename": self.filename,
+            "original_filename": self.original_filename,
+            "file_size": self.file_size,
+            "mime_type": self.mime_type,
+            "file_type": self.file_type,
+            "width": self.width,
+            "height": self.height,
+            "url": f"/uploads/{self.url_path}",
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 # Create all tables
 Base.metadata.create_all(bind=engine)
 
@@ -982,6 +1032,119 @@ def restore_note_version(db: Session, note_id: int, version_id: int, user_id: in
     db.commit()
     db.refresh(note)
     return note
+
+
+# ============== Attachment CRUD Operations ==============
+
+def create_attachment(
+    db: Session,
+    note_id: int,
+    user_id: int,
+    filename: str,
+    original_filename: str,
+    file_path: str,
+    file_size: int,
+    mime_type: str,
+    file_type: str,
+    width: int = None,
+    height: int = None,
+    url_path: str = None
+) -> Attachment:
+    """Create a new attachment record"""
+    attachment = Attachment(
+        note_id=note_id,
+        user_id=user_id,
+        filename=filename,
+        original_filename=original_filename,
+        file_path=file_path,
+        file_size=file_size,
+        mime_type=mime_type,
+        file_type=file_type,
+        width=width,
+        height=height,
+        url_path=url_path or filename
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return attachment
+
+
+def get_attachment(db: Session, attachment_id: int) -> Optional[Attachment]:
+    """Get attachment by ID"""
+    return db.query(Attachment).filter(Attachment.id == attachment_id).first()
+
+
+def get_attachment_by_url_path(db: Session, url_path: str) -> Optional[Attachment]:
+    """Get attachment by URL path"""
+    return db.query(Attachment).filter(Attachment.url_path == url_path).first()
+
+
+def get_note_attachments(db: Session, note_id: int) -> List[Attachment]:
+    """Get all attachments for a note"""
+    return db.query(Attachment).filter(Attachment.note_id == note_id).order_by(Attachment.created_at.desc()).all()
+
+
+def get_user_attachments(db: Session, user_id: int, limit: int = 100) -> List[Attachment]:
+    """Get all attachments for a user"""
+    return db.query(Attachment).filter(Attachment.user_id == user_id).order_by(Attachment.created_at.desc()).limit(limit).all()
+
+
+def delete_attachment(db: Session, attachment_id: int, user_id: int = None) -> bool:
+    """Delete an attachment"""
+    query = db.query(Attachment).filter(Attachment.id == attachment_id)
+    if user_id is not None:
+        query = query.filter(Attachment.user_id == user_id)
+    
+    attachment = query.first()
+    if not attachment:
+        return False
+    
+    db.delete(attachment)
+    db.commit()
+    return True
+
+
+def delete_note_attachments(db: Session, note_id: int) -> int:
+    """Delete all attachments for a note"""
+    attachments = db.query(Attachment).filter(Attachment.note_id == note_id).all()
+    count = len(attachments)
+    for attachment in attachments:
+        db.delete(attachment)
+    db.commit()
+    return count
+
+
+def get_attachment_count(db: Session, note_id: int = None, user_id: int = None) -> int:
+    """Get attachment count, optionally filtered by note or user"""
+    query = db.query(Attachment)
+    if note_id is not None:
+        query = query.filter(Attachment.note_id == note_id)
+    if user_id is not None:
+        query = query.filter(Attachment.user_id == user_id)
+    return query.count()
+
+
+def cleanup_orphan_attachments(db: Session, user_id: int = None) -> int:
+    """Clean up attachments that don't have associated notes"""
+    from sqlalchemy.orm import joinedload
+    
+    query = db.query(Attachment).options(joinedload(Attachment.note))
+    if user_id is not None:
+        query = query.filter(Attachment.user_id == user_id)
+    
+    attachments = query.all()
+    deleted_count = 0
+    
+    for attachment in attachments:
+        if attachment.note is None:
+            db.delete(attachment)
+            deleted_count += 1
+    
+    if deleted_count > 0:
+        db.commit()
+    
+    return deleted_count
 
 
 def compare_versions(db: Session, version_id1: int, version_id2: int) -> dict:

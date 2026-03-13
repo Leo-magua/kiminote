@@ -178,6 +178,72 @@ class ShareUpdateRequest(BaseModel):
     }
 
 
+# ============== Upload Request Models ==============
+
+class ImageUploadResponse(BaseModel):
+    """图片上传响应"""
+    id: int = Field(..., description="附件ID")
+    url: str = Field(..., description="图片访问URL")
+    filename: str = Field(..., description="文件名")
+    original_filename: str = Field(..., description="原始文件名")
+    file_size: int = Field(..., description="文件大小（字节）")
+    width: Optional[int] = Field(None, description="图片宽度")
+    height: Optional[int] = Field(None, description="图片高度")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "url": "/uploads/abc123.jpg",
+                "filename": "abc123.jpg",
+                "original_filename": "photo.jpg",
+                "file_size": 102400,
+                "width": 1920,
+                "height": 1080
+            }
+        }
+    }
+
+
+class AttachmentUploadResponse(BaseModel):
+    """附件上传响应"""
+    id: int = Field(..., description="附件ID")
+    url: str = Field(..., description="附件访问URL")
+    filename: str = Field(..., description="文件名")
+    original_filename: str = Field(..., description="原始文件名")
+    file_size: int = Field(..., description="文件大小（字节）")
+    mime_type: str = Field(..., description="MIME类型")
+    file_type: str = Field(..., description="文件类型分类")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "url": "/uploads/doc_xyz.pdf",
+                "filename": "doc_xyz.pdf",
+                "original_filename": "document.pdf",
+                "file_size": 204800,
+                "mime_type": "application/pdf",
+                "file_type": "document"
+            }
+        }
+    }
+
+
+class AttachmentResponse(AttachmentUploadResponse):
+    """附件详情响应"""
+    note_id: int = Field(..., description="关联笔记ID")
+    user_id: int = Field(..., description="上传用户ID")
+    created_at: Optional[str] = Field(None, description="创建时间")
+
+
+class AttachmentListResponse(BaseModel):
+    """附件列表响应"""
+    attachments: List[AttachmentResponse] = Field(..., description="附件列表")
+    total: int = Field(..., description="总数")
+    note_id: int = Field(..., description="笔记ID")
+
+
 # ============== Collaboration Request Models ==============
 
 class AddCollaboratorRequest(BaseModel):

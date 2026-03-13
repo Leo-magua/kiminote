@@ -43,7 +43,10 @@ if CODE_HIGHLIGHT_AVAILABLE:
 # Create markdown instance with all extensions
 md_converter = markdown.Markdown(extensions=MD_EXTENSIONS)
 
-from app.config import APP_NAME, APP_VERSION, EXPORTS_DIR, SESSION_COOKIE_NAME
+from app.config import (
+    APP_NAME, APP_VERSION, EXPORTS_DIR, SESSION_COOKIE_NAME,
+    UPLOADS_DIR, MAX_UPLOAD_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES
+)
 from app.database import (
     get_db, create_note, get_note, get_notes, update_note, 
     delete_note, get_all_notes_for_export, get_notes_count, get_all_tags,
@@ -51,7 +54,8 @@ from app.database import (
     create_share, get_share_by_token, get_note_shares, get_shares_by_note, get_all_user_shares,
     verify_share_access, revoke_share, revoke_all_shares_for_note,
     update_share, delete_share, verify_share_password, increment_share_access_count,
-    Share, get_notes_statistics, get_daily_writing_stats
+    Share, get_notes_statistics, get_daily_writing_stats,
+    create_attachment, get_attachment, get_note_attachments, delete_attachment
 )
 from app.auth import (
     get_password_hash, authenticate_user, create_user_session,
@@ -91,6 +95,7 @@ app = FastAPI(
     openapi_tags=[
         {"name": "Authentication", "description": "用户注册、登录、登出等认证操作"},
         {"name": "Notes", "description": "笔记的增删改查操作"},
+        {"name": "Upload", "description": "文件上传功能（图片、附件）"},
         {"name": "Shares", "description": "笔记分享功能（创建分享、访问分享、管理分享）"},
         {"name": "Collaboration", "description": "协作功能（版本历史、协作者管理、冲突解决）"},
         {"name": "AI Features", "description": "AI 驱动的智能功能（摘要、标签、搜索、增强）"},
@@ -1755,6 +1760,261 @@ async def get_collaborated_notes(
     
     notes = get_user_collaborated_notes(db, current_user["id"])
     return [note.to_dict() for note in notes]
+
+
+# ============== File Upload API ==============
+
+import os
+import uuid
+import mimetypes
+from pathlib import Path
+from fastapi import File, UploadFile
+
+
+def get_file_type(mime_type: str) -> str:
+    """Determine file type category from MIME type"""
+    if mime_type.startswith('image/'):
+        return 'image'
+    elif mime_type.startswith('video/'):
+        return 'video'
+    elif mime_type.startswith('audio/'):
+        return 'audio'
+    elif mime_type in ALLOWED_DOCUMENT_TYPES:
+        return 'document'
+    else:
+        return 'other'
+
+
+def generate_unique_filename(original_filename: str) -> str:
+    """Generate a unique filename for uploaded file"""
+    ext = Path(original_filename).suffix.lower()
+    unique_id = str(uuid.uuid4())[:8]
+    return f"{unique_id}{ext}"
+
+
+@app.post(
+    "/api/upload/image",
+    response_model=schemas.ImageUploadResponse,
+    tags=["Upload"],
+    summary="上传图片",
+    description="上传图片文件到服务器，支持 JPG、PNG、GIF、WebP、SVG 格式，最大 10MB。",
+    responses={
+        200: {"description": "上传成功", "model": schemas.ImageUploadResponse},
+        400: {"description": "文件类型错误或文件过大", "model": schemas.ErrorResponse},
+        401: {"description": "未认证", "model": schemas.ErrorResponse},
+    }
+)
+async def upload_image(
+    file: UploadFile = File(..., description="图片文件"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload an image file"""
+    # Validate file type
+    mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
+    
+    if mime_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"不支持的图片格式。支持: {', '.join(ALLOWED_IMAGE_TYPES)}"
+        )
+    
+    # Validate file size (read first chunk to check)
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:  # 10MB limit for images
+        raise HTTPException(status_code=400, detail="图片文件大小不能超过 10MB")
+    
+    # Generate unique filename
+    unique_filename = generate_unique_filename(file.filename)
+    file_path = UPLOADS_DIR / unique_filename
+    
+    # Save file
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Get image dimensions if possible
+    width, height = None, None
+    try:
+        from PIL import Image as PILImage
+        with PILImage.open(file_path) as img:
+            width, height = img.size
+    except Exception:
+        pass  # Not all images can be processed by PIL
+    
+    # Create attachment record
+    attachment = create_attachment(
+        db,
+        note_id=0,  # Will be updated when attached to a note
+        user_id=current_user["id"],
+        filename=unique_filename,
+        original_filename=file.filename,
+        file_path=str(file_path),
+        file_size=len(content),
+        mime_type=mime_type,
+        file_type='image',
+        width=width,
+        height=height,
+        url_path=unique_filename
+    )
+    
+    return {
+        "id": attachment.id,
+        "url": f"/uploads/{unique_filename}",
+        "filename": unique_filename,
+        "original_filename": file.filename,
+        "file_size": len(content),
+        "width": width,
+        "height": height
+    }
+
+
+@app.post(
+    "/api/upload/attachment",
+    response_model=schemas.AttachmentUploadResponse,
+    tags=["Upload"],
+    summary="上传附件",
+    description="上传附件文件到服务器，支持 PDF、Word、Excel、PPT、TXT 等格式，最大 50MB。",
+    responses={
+        200: {"description": "上传成功", "model": schemas.AttachmentUploadResponse},
+        400: {"description": "文件类型错误或文件过大", "model": schemas.ErrorResponse},
+        401: {"description": "未认证", "model": schemas.ErrorResponse},
+    }
+)
+async def upload_attachment(
+    file: UploadFile = File(..., description="附件文件"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload an attachment file"""
+    # Validate file type
+    mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
+    
+    # Allow images and documents
+    allowed_types = ALLOWED_IMAGE_TYPES | ALLOWED_DOCUMENT_TYPES
+    if mime_type not in allowed_types:
+        raise HTTPException(
+            status_code=400, 
+            detail="不支持的文件格式"
+        )
+    
+    # Validate file size
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=400, detail=f"文件大小不能超过 {MAX_UPLOAD_SIZE // 1024 // 1024}MB")
+    
+    # Generate unique filename
+    unique_filename = generate_unique_filename(file.filename)
+    file_path = UPLOADS_DIR / unique_filename
+    
+    # Save file
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Determine file type
+    file_type = get_file_type(mime_type)
+    
+    # Create attachment record
+    attachment = create_attachment(
+        db,
+        note_id=0,  # Will be updated when attached to a note
+        user_id=current_user["id"],
+        filename=unique_filename,
+        original_filename=file.filename,
+        file_path=str(file_path),
+        file_size=len(content),
+        mime_type=mime_type,
+        file_type=file_type,
+        url_path=unique_filename
+    )
+    
+    return {
+        "id": attachment.id,
+        "url": f"/uploads/{unique_filename}",
+        "filename": unique_filename,
+        "original_filename": file.filename,
+        "file_size": len(content),
+        "mime_type": mime_type,
+        "file_type": file_type
+    }
+
+
+@app.get(
+    "/api/notes/{note_id}/attachments",
+    response_model=schemas.AttachmentListResponse,
+    tags=["Upload"],
+    summary="获取笔记附件列表",
+    description="获取指定笔记的所有附件列表。",
+    responses={
+        200: {"description": "附件列表", "model": schemas.AttachmentListResponse},
+        401: {"description": "未认证", "model": schemas.ErrorResponse},
+        404: {"description": "笔记不存在", "model": schemas.ErrorResponse},
+    }
+)
+async def get_note_attachments_list(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all attachments for a note"""
+    # Check if note exists and belongs to current user
+    note = get_note(db, note_id, user_id=current_user["id"])
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    attachments = get_note_attachments(db, note_id)
+    
+    return {
+        "attachments": [att.to_dict() for att in attachments],
+        "total": len(attachments),
+        "note_id": note_id
+    }
+
+
+@app.delete(
+    "/api/attachments/{attachment_id}",
+    response_model=schemas.MessageResponse,
+    tags=["Upload"],
+    summary="删除附件",
+    description="删除指定的附件文件。",
+    responses={
+        200: {"description": "删除成功", "model": schemas.MessageResponse},
+        401: {"description": "未认证", "model": schemas.ErrorResponse},
+        403: {"description": "无权删除", "model": schemas.ErrorResponse},
+        404: {"description": "附件不存在", "model": schemas.ErrorResponse},
+    }
+)
+async def delete_attachment_endpoint(
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete an attachment"""
+    attachment = get_attachment(db, attachment_id)
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    
+    # Check ownership
+    if attachment.user_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Delete file from disk
+    try:
+        file_path = Path(attachment.file_path)
+        if file_path.exists():
+            file_path.unlink()
+    except Exception as e:
+        print(f"Failed to delete file: {e}")
+    
+    # Delete from database
+    success = delete_attachment(db, attachment_id, current_user["id"])
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete attachment")
+    
+    return {"message": "附件已删除"}
+
+
+# Mount uploads directory for serving files
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 if __name__ == "__main__":

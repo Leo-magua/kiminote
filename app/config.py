@@ -13,10 +13,25 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
 EXPORTS_DIR = BASE_DIR / "exports"
+UPLOADS_DIR = BASE_DIR / "uploads"
 
 # Ensure directories exist
 DATA_DIR.mkdir(exist_ok=True)
 EXPORTS_DIR.mkdir(exist_ok=True)
+UPLOADS_DIR.mkdir(exist_ok=True)
+
+# Upload settings
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB max file size
+ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'}
+ALLOWED_DOCUMENT_TYPES = {
+    'application/pdf', 'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain', 'text/markdown', 'text/csv'
+}
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR}/notes.db")

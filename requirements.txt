@@ -28,3 +28,6 @@ python-jose[cryptography]>=3.3.0
 # WebSocket & Real-time Collaboration
 websockets>=12.0
 python-socketio>=5.10.0
+
+# Image Processing
+Pillow>=10.0.0
