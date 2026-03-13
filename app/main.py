@@ -55,7 +55,7 @@ from app.database import (
     verify_share_access, revoke_share, revoke_all_shares_for_note,
     update_share, delete_share, verify_share_password, increment_share_access_count,
     Share, get_notes_statistics, get_daily_writing_stats,
-    create_attachment, get_attachment, get_note_attachments, delete_attachment
+    create_attachment, get_attachment, get_note_attachments, delete_attachment, delete_note_attachments
 )
 from app.auth import (
     get_password_hash, authenticate_user, create_user_session,
