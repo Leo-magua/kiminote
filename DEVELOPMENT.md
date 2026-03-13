@@ -13,7 +13,7 @@
 |------|------|--------|------|
 | MVP 核心功能 | ✅ 完成 | 100% | 基础 CRUD + AI + Web UI |
 | 用户认证 | ✅ 完成 | 100% | JWT 认证、会话管理 |
-| 富文本编辑器 | ✅ 完成 | 100% | TipTap.js、图片/附件上传、撤销重做 |
+| 富文本编辑器 | ✅ 完成 | 100% | TipTap.js v2.2+、三种编辑模式、图片/附件上传、撤销重做、表格/任务列表 |
 | 协作功能 | ✅ 完成 | 100% | WebSocket、版本历史、冲突解决、协作者管理 |
 | 部署与测试 | ⚠️ 待定 | 0% | 安全组限制，无法公网访问 |
 | 功能完善 | ✅ 完成 | 95% | 主要功能已完成 |
@@ -217,6 +217,62 @@
 ---
 
 ## 📝 开发日志
+
+### 2026-03-14 - 富文本编辑器完整实现与代码提交
+- ✅ **富文本编辑器功能完整实现并提交**
+  - **后端 API 实现** (`main.py`):
+    - `POST /api/upload/image` - 图片上传支持 JPG/PNG/GIF/WebP/SVG，最大 10MB
+    - `POST /api/upload/attachment` - 附件上传支持多种文档格式，最大 50MB
+    - `GET /api/notes/{id}/attachments` - 获取笔记附件列表
+    - `PUT /api/notes/{id}/attachments` - 更新笔记与附件关联
+    - `DELETE /api/attachments/{id}` - 删除附件
+    - `/uploads` 静态文件服务挂载
+  
+  - **数据库模型** (`database.py`):
+    - `Attachment` 模型：完整的附件信息存储（文件名、大小、MIME类型、图片尺寸等）
+    - `create_attachment()`, `get_attachment()`, `get_note_attachments()` 等 CRUD 操作
+    - `delete_attachment()`, `delete_note_attachments()` 删除功能
+  
+  - **前端编辑器** (`editor.js`):
+    - TipTap.js v2.2+ 集成，基于 ProseMirror 高性能编辑器
+    - StarterKit 提供基础格式化功能（6级标题、粗体、斜体、删除线等）
+    - 表格编辑：Table/TableRow/TableCell/TableHeader 扩展
+    - 任务列表：TaskList/TaskItem 支持可勾选任务项
+    - 高亮标记：Highlight 扩展支持文本高亮
+    - 链接插入：Link 扩展支持超链接管理
+    - 图片插入：Image 扩展支持图片上传和 Base64 预览
+    - 代码高亮：集成 highlight.js 语法高亮
+  
+  - **编辑模式切换** (`app.js`):
+    - 三种模式无缝切换：富文本编辑、实时预览、Markdown 源码
+    - Turndown.js 实现 HTML 转 Markdown
+    - Marked.js 实现 Markdown 转 HTML
+    - 自动双向内容同步
+  
+  - **图片上传功能**:
+    - 点击上传和拖拽上传支持
+    - 图片大小和类型验证
+    - 上传进度显示
+    - Base64 回退机制
+  
+  - **附件管理功能**:
+    - 多种文件格式支持（PDF/Word/Excel/PPT/TXT/图片等）
+    - 附件列表显示和管理
+    - 文件类型图标识别
+    - 文件大小格式化显示
+  
+  - **撤销/重做功能**:
+    - 工具栏撤销/重做按钮
+    - 快捷键支持（Ctrl+Z 撤销，Ctrl+Y 重做）
+    - 完整的操作历史栈
+    - 按钮状态自动更新
+  
+  - **样式优化** (`editor.css`):
+    - 完整的编辑器工具栏样式
+    - 富文本编辑器内容样式（标题、列表、代码块、表格等）
+    - 附件列表样式
+    - 上传模态框样式
+    - 响应式布局适配
 
 ### 2026-03-14 - 富文本编辑器完善与提交
 - ✅ **富文本编辑器功能最终完善**
