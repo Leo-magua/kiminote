@@ -440,7 +440,8 @@ async function saveNote() {
     try {
         if (currentNote) {
             // Update existing
-            await api.put(`/api/notes/${currentNote.id}`, { title, content });
+            const result = await api.put(`/api/notes/${currentNote.id}`, { title, content });
+            currentNote = result;
             showToast('笔记已更新');
         } else {
             // Create new
