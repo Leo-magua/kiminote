@@ -74,6 +74,11 @@ let isAiAvailable = false;
 let currentShares = [];
 let collaboratedNotes = [];  // Notes user collaborates on
 
+// Rich Text Editor state
+let richTextEditor = null;
+let currentAttachments = [];
+let isEditorReady = false;
+
 // DOM Elements
 const elements = {
     // Views
@@ -1341,11 +1346,7 @@ window.addEventListener('click', (e) => {
 });
 
 
-// ========== Rich Text Editor Integration ==========
-
-let richTextEditor = null;
-let currentAttachments = [];
-let isEditorReady = false;
+// ========== Rich Text Editor Integration (See initialization at end of file) ==========
 
 // Initialize rich text editor
 function initRichTextEditor() {
@@ -1765,7 +1766,9 @@ function setupTabSync() {
     });
 }
 
-// Initialize editor after TipTap is loaded
+// ========== Initialization ==========
+
+// Wait for TipTap to load from CDN
 function waitForTipTap(callback, maxAttempts = 50) {
     let attempts = 0;
     const check = () => {
@@ -1782,278 +1785,22 @@ function waitForTipTap(callback, maxAttempts = 50) {
     check();
 }
 
-// Initialize editor after page load
+// Initialize application
 document.addEventListener('DOMContentLoaded', () => {
-    waitForTipTap(initRichTextEditor);
-    setupTabSync();
-    setupCollaborationListeners();
+    // Initialize rich text editor
+    waitForTipTap(() => {
+        initRichTextEditor();
+        setupTabSync();
+    });
 });
 
 // Also try to initialize immediately in case DOM is already loaded
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    waitForTipTap(initRichTextEditor);
-    setupTabSync();
-    setupCollaborationListeners();
-}
-
-// ========== Collaboration Integration ==========
-
-// DOM Elements for Collaboration
-const collaborationElements = {
-    collaborationBtn: document.getElementById('collaborationBtn'),
-    versionsBtn: document.getElementById('versionsBtn'),
-    collaborationModal: document.getElementById('collaborationModal'),
-    versionsModal: document.getElementById('versionsModal'),
-    versionPreviewModal: document.getElementById('versionPreviewModal'),
-    conflictResolutionModal: document.getElementById('conflictResolutionModal'),
-    collaboratorUsername: document.getElementById('collaboratorUsername'),
-    collaboratorPermission: document.getElementById('collaboratorPermission'),
-    addCollaboratorBtn: document.getElementById('addCollaboratorBtn'),
-    collaboratorsList: document.getElementById('collaboratorsList'),
-    activeCollaborators: document.getElementById('activeCollaborators'),
-    versionsList: document.getElementById('versionsList')
-};
-
-// Open collaboration modal
-function openCollaborationModal() {
-    if (!currentNote) {
-        showToast('请先保存笔记', 'error');
-        return;
-    }
-    
-    // Load collaborators
-    loadCollaborators();
-    
-    // Connect to collaboration WebSocket
-    if (window.collaborationManager) {
-        window.collaborationManager.connect(currentNote.id);
-    }
-    
-    toggleModal(collaborationElements.collaborationModal, true);
-}
-
-// Load collaborators for current note
-async function loadCollaborators() {
-    if (!currentNote) return;
-    
-    try {
-        const result = await api.get(`/api/notes/${currentNote.id}/collaborators`);
-        window.collaboratorsManager.collaborators = result.collaborators;
-        window.collaboratorsManager.currentNoteId = currentNote.id;
-        window.collaboratorsManager.renderCollaboratorsList();
-    } catch (error) {
-        console.error('Failed to load collaborators:', error);
-        showToast('加载协作者失败', 'error');
-    }
-}
-
-// Add collaborator
-async function addCollaborator() {
-    const username = collaborationElements.collaboratorUsername.value.trim();
-    const permission = collaborationElements.collaboratorPermission.value;
-    
-    if (!username) {
-        showToast('请输入用户名', 'error');
-        return;
-    }
-    
-    try {
-        await window.collaboratorsManager.addCollaborator(username, permission);
-        collaborationElements.collaboratorUsername.value = '';
-        await loadCollaborators();
-    } catch (error) {
-        console.error('Error adding collaborator:', error);
-    }
-}
-
-// Open versions modal
-async function openVersionsModal() {
-    if (!currentNote) {
-        showToast('请先保存笔记', 'error');
-        return;
-    }
-    
-    toggleModal(collaborationElements.versionsModal, true);
-    
-    try {
-        await window.versionHistoryManager.loadVersions(currentNote.id);
-        window.versionHistoryManager.renderVersionsList();
-    } catch (error) {
-        console.error('Failed to load versions:', error);
-        showToast('加载版本历史失败', 'error');
-    }
-}
-
-// Check for conflicts before saving
-async function checkForConflicts() {
-    if (!currentNote) return { hasConflict: false };
-    
-    try {
-        const baseVersion = currentNote.current_version || 1;
-        const result = await window.conflictResolutionManager.detectConflict(
-            currentNote.id, 
-            baseVersion
-        );
-        return result;
-    } catch (error) {
-        console.error('Failed to detect conflicts:', error);
-        return { hasConflict: false };
-    }
-}
-
-// Enhanced save note with conflict detection
-const enhancedSaveNote = async function() {
-    const title = elements.noteTitle.value.trim();
-    const content = getEditorContent();
-    
-    if (!title) {
-        showToast('请输入标题', 'error');
-        return;
-    }
-    
-    // Check for conflicts if editing existing note
-    if (currentNote) {
-        const conflictResult = await checkForConflicts();
-        if (conflictResult.has_conflict) {
-            // Show conflict resolution modal
-            window.conflictResolutionManager.showConflictModal(conflictResult, async (resolvedNote) => {
-                // After conflict resolution, continue with save
-                await performSave(title, content);
-            });
-            return;
-        }
-    }
-    
-    await performSave(title, content);
-};
-
-// Perform actual save
-async function performSave(title, content) {
-    try {
-        if (currentNote) {
-            // Update existing
-            const result = await api.put(`/api/notes/${currentNote.id}`, { title, content });
-            currentNote = result;
-            showToast('笔记已更新');
-            
-            // Notify other collaborators about the change
-            if (window.collaborationManager && window.collaborationManager.isConnected) {
-                window.collaborationManager.send('save_request', {
-                    note_id: currentNote.id,
-                    sender_id: currentNote.user_id
-                });
-            }
-        } else {
-            // Create new
-            const result = await api.post('/api/notes', { title, content });
-            currentNote = result;
-            showToast('笔记已创建');
-        }
-        
-        // Reload notes
-        await loadNotes();
-        renderNoteMeta();
-        
-        // Update share button visibility
-        elements.shareBtn.style.display = 'inline-block';
-    } catch (error) {
-        showToast('保存失败: ' + error.message, 'error');
-    }
-}
-
-// Override save note with enhanced version
-saveNote = enhancedSaveNote;
-
-// Track local changes for collaboration
-let lastContent = '';
-let lastTitle = '';
-
-function trackChanges() {
-    if (!currentNote || !window.collaborationManager) return;
-    
-    const currentContent = getEditorContent();
-    const currentTitle = elements.noteTitle.value;
-    
-    // Send content changes
-    if (currentContent !== lastContent) {
-        window.collaborationManager.sendTypingStart();
-        lastContent = currentContent;
-    }
-    
-    // Track cursor position
-    if (richTextEditor && richTextEditor.editor) {
-        const { state } = richTextEditor.editor;
-        const { selection } = state;
-        window.collaborationManager.sendCursorUpdate(selection.anchor);
-    }
-}
-
-// Setup collaboration event listeners
-function setupCollaborationListeners() {
-    // Collaboration modal
-    if (collaborationElements.collaborationBtn) {
-        collaborationElements.collaborationBtn.addEventListener('click', openCollaborationModal);
-    }
-    
-    // Versions modal
-    if (collaborationElements.versionsBtn) {
-        collaborationElements.versionsBtn.addEventListener('click', openVersionsModal);
-    }
-    
-    // Add collaborator
-    if (collaborationElements.addCollaboratorBtn) {
-        collaborationElements.addCollaboratorBtn.addEventListener('click', addCollaborator);
-    }
-    
-    // Close modals
-    document.querySelectorAll('.modal-close').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const modal = e.target.closest('.modal');
-            if (modal) {
-                toggleModal(modal, false);
-                
-                // Disconnect WebSocket when closing collaboration modal
-                if (modal.id === 'collaborationModal' && window.collaborationManager) {
-                    window.collaborationManager.disconnect();
-                }
-            }
-        });
+    waitForTipTap(() => {
+        initRichTextEditor();
+        setupTabSync();
     });
-    
-    // Track changes for collaboration
-    if (elements.noteTitle) {
-        elements.noteTitle.addEventListener('input', trackChanges);
-    }
-    
-    // Track editor changes if using rich text editor
-    if (richTextEditor && richTextEditor.editor) {
-        richTextEditor.editor.on('update', trackChanges);
-    }
 }
 
-// Close collaboration modals when clicking outside
-window.addEventListener('click', (e) => {
-    if (e.target === collaborationElements.collaborationModal) {
-        toggleModal(collaborationElements.collaborationModal, false);
-        if (window.collaborationManager) {
-            window.collaborationManager.disconnect();
-        }
-    }
-    if (e.target === collaborationElements.versionsModal) {
-        toggleModal(collaborationElements.versionsModal, false);
-    }
-    if (e.target === collaborationElements.versionPreviewModal) {
-        toggleModal(collaborationElements.versionPreviewModal, false);
-    }
-    if (e.target === collaborationElements.conflictResolutionModal) {
-        toggleModal(collaborationElements.conflictResolutionModal, false);
-    }
-});
-
-// Note: Collaboration listeners are now set up in the main DOMContentLoaded handler
-
-// Export functions for global access
-window.openCollaborationModal = openCollaborationModal;
-window.openVersionsModal = openVersionsModal;
-window.loadCollaborators = loadCollaborators;
-window.addCollaborator = addCollaborator;
+// ========== Collaboration Integration (Loaded from collaboration.js) ==========
+// Collaboration functions are defined in collaboration.js and integrated in init()
