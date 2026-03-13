@@ -178,6 +178,99 @@ class ShareUpdateRequest(BaseModel):
     }
 
 
+# ============== Collaboration Request Models ==============
+
+class AddCollaboratorRequest(BaseModel):
+    """添加协作者请求"""
+    username: str = Field(..., min_length=3, max_length=50, description="协作者用户名")
+    permission: str = Field("write", description="权限级别: read(只读), write(读写), admin(管理员)")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "username": "collaborator_user",
+                "permission": "write"
+            }
+        }
+    }
+
+
+class UpdateCollaboratorRequest(BaseModel):
+    """更新协作者权限请求"""
+    permission: str = Field(..., description="权限级别: read, write, admin")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "permission": "admin"
+            }
+        }
+    }
+
+
+class RestoreVersionRequest(BaseModel):
+    """恢复版本请求"""
+    version_id: int = Field(..., description="要恢复的版本ID")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "version_id": 5
+            }
+        }
+    }
+
+
+class ConflictResolutionRequest(BaseModel):
+    """冲突解决请求"""
+    base_version: int = Field(..., description="基础版本号")
+    resolution: str = Field(..., description="解决方式: mine(使用我的), theirs(使用对方的), merge(合并)")
+    merged_content: Optional[str] = Field(None, description="合并后的内容（当 resolution 为 merge 时需要）")
+    merged_title: Optional[str] = Field(None, description="合并后的标题（可选）")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "base_version": 3,
+                "resolution": "merge",
+                "merged_content": "合并后的笔记内容",
+                "merged_title": "合并后的标题"
+            }
+        }
+    }
+
+
+class WebSocketAuthRequest(BaseModel):
+    """WebSocket 认证请求"""
+    token: str = Field(..., description="访问令牌 (JWT)")
+    note_id: int = Field(..., description="要协作编辑的笔记ID")
+
+
+class CursorUpdateRequest(BaseModel):
+    """光标位置更新请求"""
+    position: int = Field(..., ge=0, description="光标位置")
+    selection_start: Optional[int] = Field(None, ge=0, description="选区开始位置")
+    selection_end: Optional[int] = Field(None, ge=0, description="选区结束位置")
+
+
+class OperationRequest(BaseModel):
+    """协同编辑操作请求"""
+    type: str = Field(..., description="操作类型: insert(插入), delete(删除), retain(保留)")
+    position: int = Field(..., ge=0, description="操作位置")
+    content: Optional[str] = Field(None, description="插入的内容（仅 insert 类型需要）")
+    length: Optional[int] = Field(None, ge=0, description="删除的长度（仅 delete 类型需要）")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "type": "insert",
+                "position": 10,
+                "content": "插入的文本"
+            }
+        }
+    }
+
+
 # ============== Response Models ==============
 
 class UserResponse(BaseModel):
@@ -211,6 +304,7 @@ class NoteResponse(BaseModel):
     tags: List[str] = Field(default_factory=list, description="标签列表")
     created_at: Optional[str] = Field(None, description="创建时间 (ISO 8601 格式)")
     updated_at: Optional[str] = Field(None, description="更新时间 (ISO 8601 格式)")
+    current_version: int = Field(1, description="当前版本号")
     
     model_config = {
         "json_schema_extra": {
@@ -222,7 +316,8 @@ class NoteResponse(BaseModel):
                 "summary": "这是一篇欢迎笔记，介绍了 AI Notes 的基本功能。",
                 "tags": ["欢迎", "介绍"],
                 "created_at": "2026-03-13T12:00:00",
-                "updated_at": "2026-03-13T12:30:00"
+                "updated_at": "2026-03-13T12:30:00",
+                "current_version": 5
             }
         }
     }
@@ -465,6 +560,155 @@ class ShareVerifyResponse(BaseModel):
     valid: bool = Field(..., description="密码是否正确")
     message: str = Field(..., description="提示信息")
     share_url: Optional[str] = Field(None, description="验证通过后的访问链接")
+
+
+# ============== Collaboration Response Models ==============
+
+class VersionResponse(BaseModel):
+    """笔记版本响应"""
+    id: int = Field(..., description="版本ID")
+    note_id: int = Field(..., description="笔记ID")
+    user_id: int = Field(..., description="创建者用户ID")
+    version_number: int = Field(..., description="版本号")
+    title: str = Field(..., description="版本标题")
+    content: str = Field(..., description="版本内容")
+    summary: Optional[str] = Field(None, description="摘要")
+    tags: List[str] = Field(default_factory=list, description="标签列表")
+    change_summary: Optional[str] = Field(None, description="变更摘要")
+    change_type: str = Field(..., description="变更类型")
+    created_at: Optional[str] = Field(None, description="创建时间")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "note_id": 1,
+                "user_id": 1,
+                "version_number": 3,
+                "title": "笔记标题 v3",
+                "content": "笔记内容...",
+                "summary": "摘要",
+                "tags": ["标签1"],
+                "change_summary": "更新了内容",
+                "change_type": "edit",
+                "created_at": "2026-03-13T12:00:00"
+            }
+        }
+    }
+
+
+class VersionListResponse(BaseModel):
+    """版本列表响应"""
+    versions: List[VersionResponse] = Field(..., description="版本列表")
+    total: int = Field(..., description="总数")
+    note_id: int = Field(..., description="笔记ID")
+    current_version: int = Field(..., description="当前版本号")
+
+
+class VersionComparisonResponse(BaseModel):
+    """版本比较响应"""
+    version1: VersionResponse = Field(..., description="版本1")
+    version2: VersionResponse = Field(..., description="版本2")
+    title_changed: bool = Field(..., description="标题是否变更")
+    content_changed: bool = Field(..., description="内容是否变更")
+    tags_changed: bool = Field(..., description="标签是否变更")
+
+
+class CollaboratorResponse(BaseModel):
+    """协作者响应"""
+    id: int = Field(..., description="协作者记录ID")
+    note_id: int = Field(..., description="笔记ID")
+    user_id: int = Field(..., description="协作者用户ID")
+    username: Optional[str] = Field(None, description="协作者用户名")
+    email: Optional[str] = Field(None, description="协作者邮箱")
+    permission: str = Field(..., description="权限级别")
+    added_by: int = Field(..., description="添加者用户ID")
+    created_at: Optional[str] = Field(None, description="创建时间")
+    updated_at: Optional[str] = Field(None, description="更新时间")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "note_id": 1,
+                "user_id": 2,
+                "username": "collaborator",
+                "email": "collab@example.com",
+                "permission": "write",
+                "added_by": 1,
+                "created_at": "2026-03-13T12:00:00",
+                "updated_at": "2026-03-13T12:00:00"
+            }
+        }
+    }
+
+
+class CollaboratorListResponse(BaseModel):
+    """协作者列表响应"""
+    collaborators: List[CollaboratorResponse] = Field(..., description="协作者列表")
+    note_id: int = Field(..., description="笔记ID")
+    owner_id: int = Field(..., description="笔记所有者ID")
+
+
+class CollaborationSessionResponse(BaseModel):
+    """协作会话响应"""
+    session_id: str = Field(..., description="会话ID")
+    note_id: int = Field(..., description="笔记ID")
+    user_id: int = Field(..., description="用户ID")
+    username: Optional[str] = Field(None, description="用户名")
+    is_active: bool = Field(..., description="是否活跃")
+    cursor_position: Optional[int] = Field(None, description="光标位置")
+    selection_start: Optional[int] = Field(None, description="选区开始")
+    selection_end: Optional[int] = Field(None, description="选区结束")
+    last_activity: Optional[str] = Field(None, description="最后活动时间")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "session_id": "550e8400-e29b-41d4-a716-446655440000",
+                "note_id": 1,
+                "user_id": 2,
+                "username": "collaborator",
+                "is_active": True,
+                "cursor_position": 150,
+                "last_activity": "2026-03-13T12:00:00"
+            }
+        }
+    }
+
+
+class ActiveCollaboratorsResponse(BaseModel):
+    """活跃协作者响应"""
+    collaborators: List[CollaborationSessionResponse] = Field(..., description="活跃协作者列表")
+    note_id: int = Field(..., description="笔记ID")
+
+
+class ConflictDetectionResponse(BaseModel):
+    """冲突检测响应"""
+    has_conflict: bool = Field(..., description="是否存在冲突")
+    base_version: Optional[VersionResponse] = Field(None, description="基础版本")
+    current_version: Optional[VersionResponse] = Field(None, description="当前版本")
+    title_changed: bool = Field(False, description="标题是否变更")
+    content_changed: bool = Field(False, description="内容是否变更")
+    tags_changed: bool = Field(False, description="标签是否变更")
+    error: Optional[str] = Field(None, description="错误信息")
+
+
+class WebSocketMessage(BaseModel):
+    """WebSocket 消息"""
+    type: str = Field(..., description="消息类型")
+    data: dict = Field(default_factory=dict, description="消息数据")
+    timestamp: str = Field(..., description="时间戳")
+    sender_id: Optional[int] = Field(None, description="发送者用户ID")
+    sender_username: Optional[str] = Field(None, description="发送者用户名")
+
+
+class WebSocketAuthResponse(BaseModel):
+    """WebSocket 认证响应"""
+    success: bool = Field(..., description="是否认证成功")
+    message: str = Field(..., description="消息")
+    session_id: Optional[str] = Field(None, description="协作会话ID")
+    note_id: Optional[int] = Field(None, description="笔记ID")
 
 
 # ============== Statistics Models ==============

@@ -107,6 +107,8 @@
                 <div class="view-header">
                     <button id="backBtn" class="btn-text">← 返回</button>
                     <div class="view-actions">
+                        <button id="collaborationBtn" class="btn-secondary" title="协作">👥 协作</button>
+                        <button id="versionsBtn" class="btn-secondary" title="版本历史">📜 版本</button>
                         <button id="shareBtn" class="btn-secondary">分享</button>
                         <button id="previewBtn" class="btn-secondary">预览</button>
                         <button id="aiEnhanceBtn" class="btn-ai" style="display: none;">AI 增强</button>
@@ -532,7 +534,104 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
     
+    <!-- Collaboration Status Indicator -->
+    <div id="collaborationStatus" class="collaboration-status hidden"></div>
+    
+    <!-- Remote Change Indicator -->
+    <div id="remoteChangeIndicator" class="remote-change-indicator hidden"></div>
+    
+    <!-- Collaboration Modal -->
+    <div id="collaborationModal" class="modal hidden">
+        <div class="modal-content collaboration-modal-content">
+            <div class="modal-header">
+                <h3>👥 协作管理</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Active Collaborators -->
+                <div class="collaboration-section">
+                    <h4>当前在线</h4>
+                    <div id="activeCollaborators" class="active-collaborators">
+                        <span class="no-collaborators">暂无协作者</span>
+                    </div>
+                </div>
+                
+                <!-- Add Collaborator -->
+                <div class="collaboration-section">
+                    <h4>添加协作者</h4>
+                    <div class="add-collaborator-form">
+                        <input type="text" id="collaboratorUsername" placeholder="输入用户名">
+                        <select id="collaboratorPermission">
+                            <option value="write">读写</option>
+                            <option value="read">只读</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                        <button id="addCollaboratorBtn" class="btn-primary">添加</button>
+                    </div>
+                </div>
+                
+                <!-- Collaborators List -->
+                <div class="collaboration-section">
+                    <h4>协作者列表</h4>
+                    <div id="collaboratorsList" class="collaborators-list">
+                        <div class="empty-state">暂无协作者</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Version History Modal -->
+    <div id="versionsModal" class="modal hidden">
+        <div class="modal-content versions-modal-content">
+            <div class="modal-header">
+                <h3>📜 版本历史</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="versionsList" class="versions-list">
+                    <div class="empty-state">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Version Preview Modal -->
+    <div id="versionPreviewModal" class="modal hidden">
+        <div class="modal-content version-preview-modal-content">
+            <div class="modal-header">
+                <h3>👁️ 版本预览</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="versionPreviewMeta" class="version-preview-meta"></div>
+                <h4 id="versionPreviewTitle"></h4>
+                <div id="versionPreviewContent" class="version-preview-content markdown-preview"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Conflict Resolution Modal -->
+    <div id="conflictResolutionModal" class="modal hidden">
+        <div class="modal-content conflict-modal-content">
+            <div class="modal-header">
+                <h3>⚠️ 冲突解决</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="conflict-message">检测到内容冲突。服务器上的内容已被修改。请选择如何处理：</p>
+                <div id="conflictContent" class="conflict-content"></div>
+                <div class="conflict-actions">
+                    <button id="resolveMineBtn" class="btn-secondary">使用我的版本</button>
+                    <button id="resolveTheirsBtn" class="btn-secondary">使用服务器版本</button>
+                    <button id="resolveMergeBtn" class="btn-primary">合并更改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="/static/js/auth.js"></script>
+    <script src="/static/js/collaboration.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

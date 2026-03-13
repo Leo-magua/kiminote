@@ -1538,3 +1538,448 @@ button {
     background: #e5e7eb;
     color: #6b7280;
 }
+
+
+/* ============================================
+   COLLABORATION STYLES
+   ============================================ */
+
+/* Collaboration Status Indicator */
+.collaboration-status {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 999;
+    transition: all 0.3s ease;
+}
+
+.collaboration-status.connected {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.collaboration-status.disconnected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.collaboration-status.reconnecting {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.collaboration-status.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Remote Change Indicator */
+.remote-change-indicator {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    padding: 8px 16px;
+    background: var(--primary);
+    color: white;
+    border-radius: var(--radius);
+    font-size: 13px;
+    z-index: 998;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.remote-change-indicator.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Collaboration Modal */
+.collaboration-modal-content {
+    max-width: 500px;
+}
+
+.collaboration-section {
+    margin-bottom: 24px;
+}
+
+.collaboration-section h4 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Active Collaborators */
+.active-collaborators {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.active-collaborators .no-collaborators {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-style: italic;
+}
+
+.collaborator-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    font-size: 14px;
+}
+
+.collaborator-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.collaborator-name {
+    font-weight: 500;
+}
+
+.collaborator-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 4px;
+}
+
+.collaborator-status.online {
+    background: var(--success);
+}
+
+.collaborator-status.typing {
+    background: var(--warning);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Add Collaborator Form */
+.add-collaborator-form {
+    display: flex;
+    gap: 8px;
+}
+
+.add-collaborator-form input {
+    flex: 1;
+    margin-bottom: 0 !important;
+}
+
+.add-collaborator-form select {
+    width: 100px;
+    margin-bottom: 0 !important;
+}
+
+.add-collaborator-form button {
+    width: auto !important;
+    padding: 0 16px;
+}
+
+/* Collaborators List */
+.collaborators-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.collaborators-list .collaborator-item {
+    justify-content: space-between;
+}
+
+.collaborators-list .collaborator-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.collaborators-list .collaborator-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.collaborators-list .collaborator-permission {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.collaborators-list .collaborator-permission.read {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.collaborators-list .collaborator-permission.write {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.collaborators-list .collaborator-permission.admin {
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+.collaborators-list .btn-icon {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--danger);
+}
+
+.collaborators-list .btn-icon:hover {
+    background: var(--danger);
+    color: white;
+}
+
+/* Version History Modal */
+.versions-modal-content {
+    max-width: 600px;
+    max-height: 80vh;
+}
+
+.versions-modal-content .modal-body {
+    max-height: calc(80vh - 80px);
+    overflow-y: auto;
+}
+
+.versions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.version-item {
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.version-item:hover {
+    border-color: var(--primary);
+}
+
+.version-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.version-number {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.version-type {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+}
+
+.version-type.create {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.version-type.edit {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.version-type.restore {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.version-type.merge {
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+.version-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.version-meta .version-date {
+    margin-right: 12px;
+}
+
+.version-meta .version-summary {
+    font-style: italic;
+}
+
+.version-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.version-actions .btn-text {
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
+/* Version Preview Modal */
+.version-preview-modal-content {
+    max-width: 700px;
+    max-height: 80vh;
+}
+
+.version-preview-modal-content .modal-body {
+    max-height: calc(80vh - 80px);
+    overflow-y: auto;
+}
+
+.version-preview-meta {
+    display: flex;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.version-preview-content {
+    min-height: 300px;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+}
+
+/* Conflict Resolution Modal */
+.conflict-modal-content {
+    max-width: 700px;
+}
+
+.conflict-message {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+}
+
+.conflict-content {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.conflict-section {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+}
+
+.conflict-section h4 {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+}
+
+.conflict-section .version-content {
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--bg-primary);
+    border-radius: var(--radius);
+}
+
+.conflict-section .version-content.changed {
+    border: 2px solid var(--warning);
+}
+
+.conflict-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.conflict-actions button {
+    width: auto !important;
+}
+
+/* User Cursors in Editor */
+.remote-cursor {
+    position: absolute;
+    width: 2px;
+    height: 20px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.remote-cursor-label {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Selection highlights */
+.remote-selection {
+    background: rgba(79, 70, 229, 0.2);
+    pointer-events: none;
+}
+
+/* Collaborated Notes Sidebar Section */
+.collaborated-section {
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.collaborated-section h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.collaborated-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: 8px;
+}

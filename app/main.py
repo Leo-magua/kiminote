@@ -5,7 +5,7 @@ import json
 import markdown
 from datetime import datetime
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response, status
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response, status, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
@@ -92,6 +92,7 @@ app = FastAPI(
         {"name": "Authentication", "description": "用户注册、登录、登出等认证操作"},
         {"name": "Notes", "description": "笔记的增删改查操作"},
         {"name": "Shares", "description": "笔记分享功能（创建分享、访问分享、管理分享）"},
+        {"name": "Collaboration", "description": "协作功能（版本历史、协作者管理、冲突解决）"},
         {"name": "AI Features", "description": "AI 驱动的智能功能（摘要、标签、搜索、增强）"},
         {"name": "Export", "description": "数据导出功能"},
         {"name": "Utilities", "description": "工具类接口（统计、标签列表、预览等）"},
@@ -451,6 +452,21 @@ async def create_new_note(
         summary=summary,
         tags=tags
     )
+    
+    # Create initial version
+    from app.database import create_note_version
+    create_note_version(
+        db,
+        note_id=note.id,
+        user_id=current_user["id"],
+        title=note.title,
+        content=note.content,
+        summary=note.summary,
+        tags=note.tags,
+        change_summary="Note created",
+        change_type="create"
+    )
+    
     return note.to_dict()
 
 
@@ -536,6 +552,22 @@ async def update_existing_note(
         summary=summary,
         tags=tags
     )
+    
+    # Create version history after successful update
+    if note:
+        from app.database import create_note_version
+        create_note_version(
+            db,
+            note_id=note_id,
+            user_id=current_user["id"],
+            title=note.title,
+            content=note.content,
+            summary=note.summary,
+            tags=note.tags,
+            change_summary="Updated via API",
+            change_type="edit"
+        )
+    
     return note.to_dict()
 
 
@@ -1335,6 +1367,394 @@ async def share_page(
         "error": None,
         "require_password": False
     })
+
+
+# ============== Collaboration API ==============
+
+@app.get(
+    "/api/notes/{note_id}/versions",
+    response_model=schemas.VersionListResponse,
+    tags=["Collaboration"],
+    summary="获取笔记版本历史",
+    description="获取指定笔记的所有历史版本列表。"
+)
+async def get_note_versions(
+    note_id: int,
+    limit: int = Query(50, ge=1, le=100, description="返回的最大版本数"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get version history for a note"""
+    from app.database import get_note_versions, is_note_owner_or_collaborator
+    
+    # Check access
+    if not is_note_owner_or_collaborator(db, note_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    note = get_note(db, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    versions = get_note_versions(db, note_id, limit=limit)
+    
+    return {
+        "versions": [v.to_dict() for v in versions],
+        "total": len(versions),
+        "note_id": note_id,
+        "current_version": note.current_version
+    }
+
+
+@app.get(
+    "/api/notes/{note_id}/versions/{version_id}",
+    response_model=schemas.VersionResponse,
+    tags=["Collaboration"],
+    summary="获取特定版本详情",
+    description="获取指定笔记特定版本的详细内容。"
+)
+async def get_version_detail(
+    note_id: int,
+    version_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get specific version details"""
+    from app.database import get_note_version, is_note_owner_or_collaborator
+    
+    if not is_note_owner_or_collaborator(db, note_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    version = get_note_version(db, version_id)
+    if not version or version.note_id != note_id:
+        raise HTTPException(status_code=404, detail="Version not found")
+    
+    return version.to_dict()
+
+
+@app.post(
+    "/api/notes/{note_id}/versions/{version_id}/restore",
+    response_model=schemas.NoteResponse,
+    tags=["Collaboration"],
+    summary="恢复到指定版本",
+    description="将笔记恢复到指定的历史版本。"
+)
+async def restore_version(
+    note_id: int,
+    version_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Restore note to a specific version"""
+    from app.database import restore_note_version
+    
+    # Check if user is owner or has admin permission
+    note = get_note(db, note_id, user_id=current_user["id"])
+    if not note:
+        # Check if collaborator with admin permission
+        from app.database import check_collaborator_permission
+        perm = check_collaborator_permission(db, note_id, current_user["id"])
+        if perm != "admin":
+            raise HTTPException(status_code=403, detail="Admin permission required")
+    
+    restored_note = restore_note_version(db, note_id, version_id, current_user["id"])
+    if not restored_note:
+        raise HTTPException(status_code=404, detail="Version not found")
+    
+    return restored_note.to_dict()
+
+
+@app.get(
+    "/api/notes/{note_id}/versions/compare",
+    response_model=schemas.VersionComparisonResponse,
+    tags=["Collaboration"],
+    summary="比较两个版本",
+    description="比较笔记的两个版本，显示差异。"
+)
+async def compare_note_versions(
+    note_id: int,
+    version_id1: int,
+    version_id2: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Compare two versions of a note"""
+    from app.database import compare_versions, is_note_owner_or_collaborator
+    
+    if not is_note_owner_or_collaborator(db, note_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    result = compare_versions(db, version_id1, version_id2)
+    if not result:
+        raise HTTPException(status_code=404, detail="Version not found")
+    
+    return result
+
+
+@app.post(
+    "/api/notes/{note_id}/collaborators",
+    response_model=schemas.CollaboratorResponse,
+    tags=["Collaboration"],
+    summary="添加协作者",
+    description="为笔记添加协作者，设置其权限级别。"
+)
+async def add_note_collaborator(
+    note_id: int,
+    collaborator_data: schemas.AddCollaboratorRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Add a collaborator to a note"""
+    from app.database import add_collaborator, get_user_by_username
+    
+    # Check if user is owner
+    note = get_note(db, note_id, user_id=current_user["id"])
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found or access denied")
+    
+    # Find the user to add
+    target_user = get_user_by_username(db, collaborator_data.username)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if target_user.id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot add yourself as collaborator")
+    
+    # Validate permission
+    if collaborator_data.permission not in ["read", "write", "admin"]:
+        raise HTTPException(status_code=400, detail="Invalid permission type")
+    
+    # Add collaborator
+    collaborator = add_collaborator(
+        db,
+        note_id=note_id,
+        user_id=target_user.id,
+        permission=collaborator_data.permission,
+        added_by=current_user["id"]
+    )
+    
+    result = collaborator.to_dict()
+    result["username"] = target_user.username
+    result["email"] = target_user.email
+    
+    return result
+
+
+@app.delete(
+    "/api/notes/{note_id}/collaborators/{user_id}",
+    response_model=schemas.MessageResponse,
+    tags=["Collaboration"],
+    summary="移除协作者",
+    description="从笔记中移除协作者。"
+)
+async def remove_note_collaborator(
+    note_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Remove a collaborator from a note"""
+    from app.database import remove_collaborator
+    
+    # Check if user is owner
+    note = get_note(db, note_id, user_id=current_user["id"])
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found or access denied")
+    
+    # Cannot remove owner
+    if user_id == note.user_id:
+        raise HTTPException(status_code=400, detail="Cannot remove note owner")
+    
+    success = remove_collaborator(db, note_id, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Collaborator not found")
+    
+    return {"message": "Collaborator removed successfully"}
+
+
+@app.get(
+    "/api/notes/{note_id}/collaborators",
+    response_model=schemas.CollaboratorListResponse,
+    tags=["Collaboration"],
+    summary="获取协作者列表",
+    description="获取笔记的所有协作者列表。"
+)
+async def get_note_collaborators(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all collaborators for a note"""
+    from app.database import get_note_collaborators, is_note_owner_or_collaborator, get_user_by_id
+    
+    if not is_note_owner_or_collaborator(db, note_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    note = get_note(db, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    collaborators = get_note_collaborators(db, note_id)
+    
+    result = []
+    for c in collaborators:
+        collab_dict = c.to_dict()
+        user = get_user_by_id(db, c.user_id)
+        if user:
+            collab_dict["username"] = user.username
+            collab_dict["email"] = user.email
+        result.append(collab_dict)
+    
+    return {
+        "collaborators": result,
+        "note_id": note_id,
+        "owner_id": note.user_id
+    }
+
+
+@app.get(
+    "/api/notes/{note_id}/collaborators/active",
+    response_model=schemas.ActiveCollaboratorsResponse,
+    tags=["Collaboration"],
+    summary="获取活跃协作者",
+    description="获取当前正在协作编辑该笔记的活跃用户列表。"
+)
+async def get_active_collaborators(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get active collaborators (currently editing)"""
+    from app.database import is_note_owner_or_collaborator, get_active_collaborators, get_user_by_id
+    
+    if not is_note_owner_or_collaborator(db, note_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    sessions = get_active_collaborators(db, note_id)
+    
+    result = []
+    for session in sessions:
+        session_dict = session.to_dict()
+        user = get_user_by_id(db, session.user_id)
+        if user:
+            session_dict["username"] = user.username
+        result.append(session_dict)
+    
+    return {
+        "collaborators": result,
+        "note_id": note_id
+    }
+
+
+@app.post(
+    "/api/notes/{note_id}/conflict/detect",
+    response_model=schemas.ConflictDetectionResponse,
+    tags=["Collaboration"],
+    summary="检测冲突",
+    description="检测当前编辑是否与服务器版本存在冲突。"
+)
+async def detect_note_conflict(
+    note_id: int,
+    base_version: int = Query(..., description="基础版本号"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Detect if there's a conflict between versions"""
+    from app.database import detect_conflict, is_note_owner_or_collaborator, get_note
+    
+    if not is_note_owner_or_collaborator(db, note_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    note = get_note(db, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    result = detect_conflict(db, note_id, base_version, note.current_version)
+    
+    return result
+
+
+@app.post(
+    "/api/notes/{note_id}/conflict/resolve",
+    response_model=schemas.NoteResponse,
+    tags=["Collaboration"],
+    summary="解决冲突",
+    description="提交冲突解决方案，合并更改。"
+)
+async def resolve_note_conflict(
+    note_id: int,
+    resolution_data: schemas.ConflictResolutionRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Resolve a conflict by merging changes"""
+    from app.database import merge_changes, is_note_owner_or_collaborator
+    
+    if not is_note_owner_or_collaborator(db, note_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    note = get_note(db, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    # Build changes dict
+    changes = {
+        "change_summary": f"Conflict resolution: {resolution_data.resolution}"
+    }
+    
+    if resolution_data.resolution == "mine":
+        # Keep current content (no change needed)
+        pass
+    elif resolution_data.resolution == "theirs":
+        # Should reload from server (client handles this)
+        pass
+    elif resolution_data.resolution == "merge":
+        if resolution_data.merged_content:
+            changes["content"] = resolution_data.merged_content
+        if resolution_data.merged_title:
+            changes["title"] = resolution_data.merged_title
+    
+    merged_note = merge_changes(
+        db, note_id, current_user["id"],
+        resolution_data.base_version, changes
+    )
+    
+    if not merged_note:
+        raise HTTPException(status_code=500, detail="Failed to merge changes")
+    
+    return merged_note.to_dict()
+
+
+# ============== WebSocket Endpoint ==============
+
+@app.websocket("/ws/collaborate/{note_id}")
+async def websocket_collaborate(
+    websocket: WebSocket,
+    note_id: int,
+    db: Session = Depends(get_db)
+):
+    """WebSocket endpoint for real-time collaboration"""
+    from app.websocket import handle_websocket
+    await handle_websocket(websocket, note_id, db)
+
+
+# ============== Collaborated Notes API ==============
+
+@app.get(
+    "/api/collaborated-notes",
+    response_model=List[schemas.NoteResponse],
+    tags=["Collaboration"],
+    summary="获取协作笔记列表",
+    description="获取当前用户作为协作者的所有笔记列表。"
+)
+async def get_collaborated_notes(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all notes where user is a collaborator"""
+    from app.database import get_user_collaborated_notes
+    
+    notes = get_user_collaborated_notes(db, current_user["id"])
+    return [note.to_dict() for note in notes]
 
 
 if __name__ == "__main__":

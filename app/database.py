@@ -46,9 +46,14 @@ class Note(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Version control
+    current_version = Column(Integer, default=1)  # Current version number
+    
     # Relationships
     user = relationship("User", back_populates="notes")
     shares = relationship("Share", back_populates="note", cascade="all, delete-orphan")
+    collaborators = relationship("NoteCollaborator", back_populates="note", cascade="all, delete-orphan")
+    versions = relationship("NoteVersion", back_populates="note", cascade="all, delete-orphan")
     
     def to_dict(self) -> dict:
         """Convert note to dictionary"""
@@ -61,6 +66,7 @@ class Note(Base):
             "tags": [tag.strip() for tag in self.tags.split(",")] if self.tags else [],
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "current_version": self.current_version,
         }
 
 
@@ -151,6 +157,128 @@ class UserSession(Base):
     
     # Relationships
     user = relationship("User")
+
+
+class NoteVersion(Base):
+    """Note version history for tracking changes"""
+    __tablename__ = "note_versions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Version data
+    version_number = Column(Integer, nullable=False)  # Sequential version number
+    title = Column(String(200), nullable=False)
+    content = Column(Text, nullable=False)
+    summary = Column(Text, nullable=True)
+    tags = Column(String(500), nullable=True)
+    
+    # Change metadata
+    change_summary = Column(String(500), nullable=True)  # Brief description of changes
+    change_type = Column(String(50), default="edit")  # create, edit, delete, restore
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    note = relationship("Note", back_populates="versions")
+    user = relationship("User")
+    
+    def to_dict(self) -> dict:
+        """Convert version to dictionary"""
+        return {
+            "id": self.id,
+            "note_id": self.note_id,
+            "user_id": self.user_id,
+            "version_number": self.version_number,
+            "title": self.title,
+            "content": self.content,
+            "summary": self.summary,
+            "tags": [tag.strip() for tag in self.tags.split(",")] if self.tags else [],
+            "change_summary": self.change_summary,
+            "change_type": self.change_type,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class NoteCollaborator(Base):
+    """Note collaborators - users who can edit shared notes"""
+    __tablename__ = "note_collaborators"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Permission level
+    permission = Column(String(20), default="write")  # read, write, admin
+    
+    # Who added this collaborator
+    added_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    note = relationship("Note", back_populates="collaborators")
+    user = relationship("User", foreign_keys=[user_id])
+    
+    def to_dict(self) -> dict:
+        """Convert collaborator to dictionary"""
+        return {
+            "id": self.id,
+            "note_id": self.note_id,
+            "user_id": self.user_id,
+            "permission": self.permission,
+            "added_by": self.added_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class CollaborationSession(Base):
+    """Active collaboration sessions for real-time editing"""
+    __tablename__ = "collaboration_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Session info
+    session_id = Column(String(36), unique=True, nullable=False, index=True)
+    websocket_id = Column(String(64), nullable=True)  # WebSocket connection ID
+    
+    # User presence
+    is_active = Column(Boolean, default=True)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+    
+    # Cursor position (for showing where user is editing)
+    cursor_position = Column(Integer, nullable=True)
+    selection_start = Column(Integer, nullable=True)
+    selection_end = Column(Integer, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    note = relationship("Note")
+    user = relationship("User")
+    
+    def to_dict(self) -> dict:
+        """Convert session to dictionary"""
+        return {
+            "id": self.id,
+            "note_id": self.note_id,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "is_active": self.is_active,
+            "cursor_position": self.cursor_position,
+            "selection_start": self.selection_start,
+            "selection_end": self.selection_end,
+            "last_activity": self.last_activity.isoformat() if self.last_activity else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 # Create all tables
@@ -751,3 +879,410 @@ def get_daily_writing_stats(db: Session, user_id: int, days: int = 7) -> List[di
             stat["avg_characters"] = round(stat["total_characters"] / stat["notes_created"], 1)
     
     return list(stats_by_date.values())
+
+
+# ============== Version Control Operations ==============
+
+def create_note_version(
+    db: Session,
+    note_id: int,
+    user_id: int,
+    title: str,
+    content: str,
+    summary: str = None,
+    tags: str = None,
+    change_summary: str = None,
+    change_type: str = "edit"
+) -> NoteVersion:
+    """Create a new version for a note"""
+    # Get the latest version number
+    latest_version = db.query(NoteVersion).filter(
+        NoteVersion.note_id == note_id
+    ).order_by(NoteVersion.version_number.desc()).first()
+    
+    version_number = 1 if not latest_version else latest_version.version_number + 1
+    
+    version = NoteVersion(
+        note_id=note_id,
+        user_id=user_id,
+        version_number=version_number,
+        title=title,
+        content=content,
+        summary=summary,
+        tags=tags,
+        change_summary=change_summary,
+        change_type=change_type
+    )
+    db.add(version)
+    
+    # Update note's current version
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if note:
+        note.current_version = version_number
+    
+    db.commit()
+    db.refresh(version)
+    return version
+
+
+def get_note_versions(db: Session, note_id: int, limit: int = 50) -> List[NoteVersion]:
+    """Get version history for a note"""
+    return db.query(NoteVersion).filter(
+        NoteVersion.note_id == note_id
+    ).order_by(NoteVersion.version_number.desc()).limit(limit).all()
+
+
+def get_note_version(db: Session, version_id: int) -> Optional[NoteVersion]:
+    """Get a specific version by ID"""
+    return db.query(NoteVersion).filter(NoteVersion.id == version_id).first()
+
+
+def get_note_version_by_number(db: Session, note_id: int, version_number: int) -> Optional[NoteVersion]:
+    """Get a specific version by note ID and version number"""
+    return db.query(NoteVersion).filter(
+        NoteVersion.note_id == note_id,
+        NoteVersion.version_number == version_number
+    ).first()
+
+
+def restore_note_version(db: Session, note_id: int, version_id: int, user_id: int) -> Optional[Note]:
+    """Restore a note to a specific version"""
+    version = db.query(NoteVersion).filter(
+        NoteVersion.id == version_id,
+        NoteVersion.note_id == note_id
+    ).first()
+    
+    if not version:
+        return None
+    
+    # Update the note
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        return None
+    
+    note.title = version.title
+    note.content = version.content
+    note.summary = version.summary
+    note.tags = version.tags
+    note.updated_at = datetime.utcnow()
+    
+    # Create a new version for the restore action
+    create_note_version(
+        db,
+        note_id=note_id,
+        user_id=user_id,
+        title=version.title,
+        content=version.content,
+        summary=version.summary,
+        tags=version.tags,
+        change_summary=f"Restored to version {version.version_number}",
+        change_type="restore"
+    )
+    
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+def compare_versions(db: Session, version_id1: int, version_id2: int) -> dict:
+    """Compare two versions and return differences"""
+    v1 = db.query(NoteVersion).filter(NoteVersion.id == version_id1).first()
+    v2 = db.query(NoteVersion).filter(NoteVersion.id == version_id2).first()
+    
+    if not v1 or not v2:
+        return None
+    
+    return {
+        "version1": v1.to_dict(),
+        "version2": v2.to_dict(),
+        "title_changed": v1.title != v2.title,
+        "content_changed": v1.content != v2.content,
+        "tags_changed": v1.tags != v2.tags,
+    }
+
+
+def cleanup_old_versions(db: Session, note_id: int, keep_count: int = 100) -> int:
+    """Clean up old versions, keeping only the specified number of recent versions"""
+    versions = db.query(NoteVersion).filter(
+        NoteVersion.note_id == note_id
+    ).order_by(NoteVersion.version_number.desc()).offset(keep_count).all()
+    
+    count = len(versions)
+    for version in versions:
+        db.delete(version)
+    
+    db.commit()
+    return count
+
+
+# ============== Collaboration Operations ==============
+
+def add_collaborator(
+    db: Session,
+    note_id: int,
+    user_id: int,
+    permission: str = "write",
+    added_by: int = None
+) -> Optional[NoteCollaborator]:
+    """Add a collaborator to a note"""
+    # Check if already a collaborator
+    existing = db.query(NoteCollaborator).filter(
+        NoteCollaborator.note_id == note_id,
+        NoteCollaborator.user_id == user_id
+    ).first()
+    
+    if existing:
+        # Update permission
+        existing.permission = permission
+        existing.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return existing
+    
+    collaborator = NoteCollaborator(
+        note_id=note_id,
+        user_id=user_id,
+        permission=permission,
+        added_by=added_by
+    )
+    db.add(collaborator)
+    db.commit()
+    db.refresh(collaborator)
+    return collaborator
+
+
+def remove_collaborator(db: Session, note_id: int, user_id: int) -> bool:
+    """Remove a collaborator from a note"""
+    collaborator = db.query(NoteCollaborator).filter(
+        NoteCollaborator.note_id == note_id,
+        NoteCollaborator.user_id == user_id
+    ).first()
+    
+    if not collaborator:
+        return False
+    
+    db.delete(collaborator)
+    db.commit()
+    return True
+
+
+def get_note_collaborators(db: Session, note_id: int) -> List[NoteCollaborator]:
+    """Get all collaborators for a note"""
+    return db.query(NoteCollaborator).filter(
+        NoteCollaborator.note_id == note_id
+    ).all()
+
+
+def get_user_collaborated_notes(db: Session, user_id: int) -> List[Note]:
+    """Get all notes that a user is a collaborator on"""
+    collaborations = db.query(NoteCollaborator).filter(
+        NoteCollaborator.user_id == user_id
+    ).all()
+    
+    note_ids = [c.note_id for c in collaborations]
+    if not note_ids:
+        return []
+    
+    return db.query(Note).filter(Note.id.in_(note_ids)).all()
+
+
+def check_collaborator_permission(db: Session, note_id: int, user_id: int) -> Optional[str]:
+    """Check if a user is a collaborator on a note and return their permission level"""
+    collaborator = db.query(NoteCollaborator).filter(
+        NoteCollaborator.note_id == note_id,
+        NoteCollaborator.user_id == user_id
+    ).first()
+    
+    return collaborator.permission if collaborator else None
+
+
+def is_note_owner_or_collaborator(db: Session, note_id: int, user_id: int) -> bool:
+    """Check if user is the owner or a collaborator of the note"""
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        return False
+    
+    # Check if owner
+    if note.user_id == user_id:
+        return True
+    
+    # Check if collaborator
+    permission = check_collaborator_permission(db, note_id, user_id)
+    return permission is not None
+
+
+# ============== Collaboration Session Operations ==============
+
+def create_collaboration_session(
+    db: Session,
+    note_id: int,
+    user_id: int,
+    websocket_id: str = None
+) -> CollaborationSession:
+    """Create a new collaboration session"""
+    import uuid
+    
+    session = CollaborationSession(
+        note_id=note_id,
+        user_id=user_id,
+        session_id=str(uuid.uuid4()),
+        websocket_id=websocket_id
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def get_collaboration_session(db: Session, session_id: str) -> Optional[CollaborationSession]:
+    """Get a collaboration session by ID"""
+    return db.query(CollaborationSession).filter(
+        CollaborationSession.session_id == session_id
+    ).first()
+
+
+def get_active_collaborators(db: Session, note_id: int) -> List[CollaborationSession]:
+    """Get all active collaboration sessions for a note"""
+    # Clean up inactive sessions first (older than 5 minutes)
+    cutoff = datetime.utcnow() - timedelta(minutes=5)
+    db.query(CollaborationSession).filter(
+        CollaborationSession.note_id == note_id,
+        CollaborationSession.last_activity < cutoff
+    ).update({"is_active": False})
+    db.commit()
+    
+    return db.query(CollaborationSession).filter(
+        CollaborationSession.note_id == note_id,
+        CollaborationSession.is_active == True
+    ).all()
+
+
+def update_collaboration_session(
+    db: Session,
+    session_id: str,
+    cursor_position: int = None,
+    selection_start: int = None,
+    selection_end: int = None
+) -> Optional[CollaborationSession]:
+    """Update collaboration session with cursor position"""
+    session = db.query(CollaborationSession).filter(
+        CollaborationSession.session_id == session_id
+    ).first()
+    
+    if not session:
+        return None
+    
+    if cursor_position is not None:
+        session.cursor_position = cursor_position
+    if selection_start is not None:
+        session.selection_start = selection_start
+    if selection_end is not None:
+        session.selection_end = selection_end
+    
+    session.last_activity = datetime.utcnow()
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def deactivate_collaboration_session(db: Session, session_id: str) -> bool:
+    """Deactivate a collaboration session"""
+    session = db.query(CollaborationSession).filter(
+        CollaborationSession.session_id == session_id
+    ).first()
+    
+    if not session:
+        return False
+    
+    session.is_active = False
+    db.commit()
+    return True
+
+
+def cleanup_inactive_sessions(db: Session, inactive_minutes: int = 30) -> int:
+    """Clean up inactive collaboration sessions"""
+    cutoff = datetime.utcnow() - timedelta(minutes=inactive_minutes)
+    
+    sessions = db.query(CollaborationSession).filter(
+        CollaborationSession.is_active == True,
+        CollaborationSession.last_activity < cutoff
+    ).all()
+    
+    count = len(sessions)
+    for session in sessions:
+        session.is_active = False
+    
+    db.commit()
+    return count
+
+
+# ============== Conflict Resolution Operations ==============
+
+def detect_conflict(
+    db: Session,
+    note_id: int,
+    base_version: int,
+    current_version: int
+) -> dict:
+    """Detect if there's a conflict between versions"""
+    base = get_note_version_by_number(db, note_id, base_version)
+    current = get_note_version_by_number(db, note_id, current_version)
+    
+    if not base or not current:
+        return {"has_conflict": False, "error": "Version not found"}
+    
+    # If versions are the same, no conflict
+    if base_version == current_version:
+        return {"has_conflict": False}
+    
+    # Check what fields changed
+    return {
+        "has_conflict": True,
+        "base_version": base.to_dict(),
+        "current_version": current.to_dict(),
+        "title_changed": base.title != current.title,
+        "content_changed": base.content != current.content,
+        "tags_changed": base.tags != current.tags,
+    }
+
+
+def merge_changes(
+    db: Session,
+    note_id: int,
+    user_id: int,
+    base_version: int,
+    changes: dict
+) -> Optional[Note]:
+    """Merge changes from a conflict resolution"""
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        return None
+    
+    # Apply changes
+    if "title" in changes:
+        note.title = changes["title"]
+    if "content" in changes:
+        note.content = changes["content"]
+    if "summary" in changes:
+        note.summary = changes["summary"]
+    if "tags" in changes:
+        note.tags = changes["tags"]
+    
+    note.updated_at = datetime.utcnow()
+    
+    # Create a new version
+    create_note_version(
+        db,
+        note_id=note_id,
+        user_id=user_id,
+        title=note.title,
+        content=note.content,
+        summary=note.summary,
+        tags=note.tags,
+        change_summary=changes.get("change_summary", "Merged changes"),
+        change_type="merge"
+    )
+    
+    db.commit()
+    db.refresh(note)
+    return note
