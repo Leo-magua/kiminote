@@ -147,7 +147,11 @@ const elements = {
     shareInfoExpires: document.getElementById('shareInfoExpires'),
     existingShares: document.getElementById('existingShares'),
     sharesList: document.getElementById('sharesList'),
-    shareBtn: document.getElementById('shareBtn')
+    shareBtn: document.getElementById('shareBtn'),
+    
+    // Stats Modal
+    statsModal: document.getElementById('statsModal'),
+    statsBtn: document.getElementById('statsBtn')
 };
 
 // API Helper
@@ -724,6 +728,7 @@ elements.modalCloseBtns.forEach(btn => {
         toggleModal(elements.smartSearchModal, false);
         toggleModal(elements.aiEnhanceModal, false);
         toggleModal(elements.shareModal, false);
+        toggleModal(elements.statsModal, false);
     });
 });
 
@@ -773,6 +778,8 @@ document.addEventListener('keydown', (e) => {
             toggleModal(elements.smartSearchModal, false);
         } else if (!elements.aiEnhanceModal.classList.contains('hidden')) {
             toggleModal(elements.aiEnhanceModal, false);
+        } else if (!elements.statsModal.classList.contains('hidden')) {
+            toggleModal(elements.statsModal, false);
         } else if (!elements.noteEditView.classList.contains('hidden')) {
             showView('list');
         }
@@ -1004,5 +1011,161 @@ elements.closeShareBtn.addEventListener('click', () => {
 window.addEventListener('click', (e) => {
     if (e.target === elements.shareModal) {
         toggleModal(elements.shareModal, false);
+    }
+});
+
+// ========== Statistics Functions ==========
+
+// Open statistics modal
+function openStatsModal() {
+    loadStatistics();
+    toggleModal(elements.statsModal, true);
+}
+
+// Load statistics from API
+async function loadStatistics() {
+    try {
+        // Show loading state
+        document.getElementById('hourlyChart').innerHTML = '<div class="chart-placeholder">加载中...</div>';
+        document.getElementById('weekdayChart').innerHTML = '<div class="chart-placeholder">加载中...</div>';
+        document.getElementById('activityChart').innerHTML = '<div class="chart-placeholder">加载中...</div>';
+        
+        const stats = await api.get('/api/stats/detailed');
+        
+        // Update overview cards
+        document.getElementById('statTotalNotes').textContent = stats.total_notes.toLocaleString();
+        document.getElementById('statTotalWords').textContent = stats.total_words.toLocaleString();
+        document.getElementById('statTotalChars').textContent = stats.total_characters.toLocaleString();
+        document.getElementById('statCurrentStreak').textContent = stats.current_streak;
+        
+        // Update recent stats
+        document.getElementById('statWeekNotes').textContent = stats.notes_this_week;
+        document.getElementById('statMonthNotes').textContent = stats.notes_this_month;
+        document.getElementById('statAvgWords').textContent = stats.avg_words_per_note;
+        document.getElementById('statAvgChars').textContent = stats.avg_characters_per_note;
+        
+        // Render charts
+        renderHourlyChart(stats.hourly_distribution);
+        renderWeekdayChart(stats.weekday_distribution);
+        renderActivityChart(stats.activity_by_date);
+        
+    } catch (error) {
+        console.error('Failed to load statistics:', error);
+        showToast('加载统计数据失败: ' + error.message, 'error');
+    }
+}
+
+// Render hourly distribution chart
+function renderHourlyChart(hourlyData) {
+    if (!hourlyData || hourlyData.length === 0 || hourlyData.every(d => d.count === 0)) {
+        document.getElementById('hourlyChart').innerHTML = `
+            <div class="no-data">
+                <div class="no-data-icon">📝</div>
+                <span>暂无数据</span>
+            </div>
+        `;
+        return;
+    }
+    
+    const maxCount = Math.max(...hourlyData.map(d => d.count));
+    const html = `
+        <div class="bar-chart">
+            ${hourlyData.map(item => {
+                const height = maxCount > 0 ? (item.count / maxCount * 100) : 0;
+                const label = item.hour.toString().padStart(2, '0');
+                return `
+                    <div class="bar-item" title="${label}:00 - ${item.count} 篇笔记">
+                        ${item.count > 0 ? `<div class="bar-value">${item.count}</div>` : ''}
+                        <div class="bar" style="height: ${height}px;"></div>
+                        <div class="bar-label">${label}</div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+    document.getElementById('hourlyChart').innerHTML = html;
+}
+
+// Render weekday distribution chart
+function renderWeekdayChart(weekdayData) {
+    if (!weekdayData || weekdayData.length === 0 || weekdayData.every(d => d.count === 0)) {
+        document.getElementById('weekdayChart').innerHTML = `
+            <div class="no-data">
+                <div class="no-data-icon">📝</div>
+                <span>暂无数据</span>
+            </div>
+        `;
+        return;
+    }
+    
+    const maxCount = Math.max(...weekdayData.map(d => d.count));
+    const html = `
+        <div class="bar-chart">
+            ${weekdayData.map(item => {
+                const height = maxCount > 0 ? (item.count / maxCount * 100) : 0;
+                return `
+                    <div class="bar-item" title="${item.day} - ${item.count} 篇笔记">
+                        ${item.count > 0 ? `<div class="bar-value">${item.count}</div>` : ''}
+                        <div class="bar" style="height: ${height}px;"></div>
+                        <div class="bar-label">${item.day.slice(0, 2)}</div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+    document.getElementById('weekdayChart').innerHTML = html;
+}
+
+// Render activity heatmap
+function renderActivityChart(activityData) {
+    if (!activityData || activityData.length === 0) {
+        document.getElementById('activityChart').innerHTML = `
+            <div class="no-data">
+                <div class="no-data-icon">📊</div>
+                <span>暂无活动数据</span>
+            </div>
+        `;
+        return;
+    }
+    
+    const maxCount = Math.max(...activityData.map(d => d.notes_created));
+    
+    const html = `
+        <div class="activity-heatmap">
+            ${activityData.map(item => {
+                if (!item.date) return '';
+                const date = new Date(item.date);
+                const day = date.getDate();
+                const count = item.notes_created;
+                
+                // Determine level (0-5)
+                let level = 0;
+                if (count > 0) {
+                    if (maxCount <= 1) level = 3;
+                    else level = Math.ceil(count / maxCount * 5);
+                    level = Math.min(level, 5);
+                }
+                
+                const tooltip = `${item.date}: ${count} 篇笔记, ${item.characters_written} 字`;
+                
+                return `
+                    <div class="heatmap-cell ${level === 0 ? 'empty' : 'level-' + level}" 
+                         data-tooltip="${tooltip}">
+                        ${day}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+    document.getElementById('activityChart').innerHTML = html;
+}
+
+// Statistics event listeners
+elements.statsBtn.addEventListener('click', openStatsModal);
+
+// Close stats modal when clicking outside
+elements.statsModal.addEventListener('click', (e) => {
+    if (e.target === elements.statsModal) {
+        toggleModal(elements.statsModal, false);
     }
 });

@@ -48,8 +48,9 @@ from app.database import (
     get_db, create_note, get_note, get_notes, update_note, 
     delete_note, get_all_notes_for_export, get_notes_count, get_all_tags,
     create_user, get_user_by_username, get_user_by_email,
-    create_share, get_share_by_token, get_note_shares,
+    create_share, get_share_by_token, get_note_shares, get_shares_by_note, get_all_user_shares,
     verify_share_access, revoke_share, revoke_all_shares_for_note,
+    update_share, delete_share, verify_share_password, increment_share_access_count,
     Share, get_notes_statistics, get_daily_writing_stats
 )
 from app.auth import (

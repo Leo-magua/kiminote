@@ -318,6 +318,7 @@ def create_share(
     db: Session,
     note_id: int,
     owner_id: int,
+    permission: str = "public",
     password: str = None,
     max_access: int = None,
     expires_days: int = None
@@ -349,6 +350,7 @@ def create_share(
         note_id=note_id,
         owner_id=owner_id,
         token=token,
+        permission=permission,
         password_hash=password_hash,
         max_access=max_access,
         expires_at=expires_at
@@ -440,6 +442,92 @@ def revoke_all_shares_for_note(db: Session, note_id: int, owner_id: int) -> int:
         share.is_active = False
     db.commit()
     return count
+
+
+def get_shares_by_note(db: Session, note_id: int, user_id: int) -> List[Share]:
+    """Get all shares for a specific note"""
+    return db.query(Share).filter(
+        Share.note_id == note_id,
+        Share.owner_id == user_id
+    ).all()
+
+
+def get_all_user_shares(db: Session, user_id: int) -> List[Share]:
+    """Get all shares created by a user"""
+    return db.query(Share).filter(
+        Share.owner_id == user_id
+    ).order_by(Share.created_at.desc()).all()
+
+
+def update_share(
+    db: Session,
+    share_token: str,
+    owner_id: int,
+    **kwargs
+) -> Optional[Share]:
+    """Update share settings"""
+    share = get_share_by_token(db, share_token)
+    if not share or share.owner_id != owner_id:
+        return None
+    
+    if "permission" in kwargs:
+        # Handle permission changes
+        permission = kwargs["permission"]
+        if permission == "public":
+            share.password_hash = None
+        elif permission == "private":
+            share.is_active = False
+    
+    if "password" in kwargs:
+        from app.auth import get_password_hash
+        password = kwargs["password"]
+        if password:
+            share.password_hash = get_password_hash(password)
+        else:
+            share.password_hash = None
+    
+    if "is_active" in kwargs:
+        share.is_active = kwargs["is_active"]
+    
+    if "expires_at" in kwargs:
+        share.expires_at = kwargs["expires_at"]
+    
+    db.commit()
+    db.refresh(share)
+    return share
+
+
+def delete_share(db: Session, share_token: str, owner_id: int) -> bool:
+    """Delete a share by token"""
+    share = get_share_by_token(db, share_token)
+    if not share or share.owner_id != owner_id:
+        return False
+    
+    db.delete(share)
+    db.commit()
+    return True
+
+
+def verify_share_password(db: Session, share_token: str, password: str) -> bool:
+    """Verify password for a share"""
+    share = get_share_by_token(db, share_token)
+    if not share or not share.password_hash:
+        return False
+    
+    from app.auth import verify_password
+    return verify_password(password, share.password_hash)
+
+
+def increment_share_access_count(db: Session, share_token: str) -> bool:
+    """Increment access count for a share"""
+    share = get_share_by_token(db, share_token)
+    if not share:
+        return False
+    
+    share.access_count += 1
+    share.last_accessed_at = datetime.utcnow()
+    db.commit()
+    return True
 
 
 # ============== Session CRUD Operations ==============
