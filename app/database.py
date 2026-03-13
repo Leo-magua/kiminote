@@ -1,7 +1,6 @@
 """
-Database models and operations for AI Notes
+Database models and operations for AI Notes - Share functionality
 """
-import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
@@ -28,52 +27,10 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
-    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
-    shares = relationship("Share", back_populates="user", cascade="all, delete-orphan")
-    
-    def to_dict(self) -> dict:
-        """Convert user to dictionary (excluding sensitive data)"""
-        return {
-            "id": self.id,
-            "username": self.username,
-            "email": self.email,
-            "is_active": self.is_active,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
-
-
-class UserSession(Base):
-    """User session model for token management"""
-    __tablename__ = "user_sessions"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(String(64), unique=True, nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=False)
-    last_activity = Column(DateTime, default=datetime.utcnow)
-    ip_address = Column(String(45), nullable=True)  # IPv6 compatible
-    user_agent = Column(String(255), nullable=True)
-    is_valid = Column(Boolean, default=True)
-    
-    # Relationships
-    user = relationship("User", back_populates="sessions")
-    
-    def to_dict(self) -> dict:
-        """Convert session to dictionary"""
-        return {
-            "id": self.id,
-            "session_id": self.session_id,
-            "user_id": self.user_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
-            "last_activity": self.last_activity.isoformat() if self.last_activity else None,
-            "is_valid": self.is_valid,
-        }
+    notes = relationship("Note", back_populates="user")
+    shares = relationship("Share", back_populates="owner")
 
 
 class Note(Base):
@@ -101,48 +58,39 @@ class Note(Base):
             "title": self.title,
             "content": self.content,
             "summary": self.summary,
-            "tags": self.tags.split(",") if self.tags else [],
+            "tags": [tag.strip() for tag in self.tags.split(",")] if self.tags else [],
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 
 class Share(Base):
-    """Note share model"""
+    """Share model for note sharing"""
     __tablename__ = "shares"
     
     id = Column(Integer, primary_key=True, index=True)
-    share_token = Column(String(32), unique=True, nullable=False, index=True)  # 8位短链接
     note_id = Column(Integer, ForeignKey("notes.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Share token (unique, used in URL)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    
+    # Share settings
     permission = Column(String(20), default="public")  # public, password, private
-    password_hash = Column(String(255), nullable=True)  # 密码保护时使用
-    expires_at = Column(DateTime, nullable=True)  # 过期时间，null表示永不过期
-    access_count = Column(Integer, default=0)  # 访问次数统计
+    is_active = Column(Boolean, default=True)
+    password_hash = Column(String(255), nullable=True)  # Optional password protection
+    max_access = Column(Integer, nullable=True)  # Max number of accesses (None = unlimited)
+    access_count = Column(Integer, default=0)  # Current access count
+    expires_at = Column(DateTime, nullable=True)  # Expiration time (None = never expires)
+    
+    # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    is_active = Column(Boolean, default=True)  # 是否激活
+    last_accessed_at = Column(DateTime, nullable=True)
     
     # Relationships
     note = relationship("Note", back_populates="shares")
-    user = relationship("User", back_populates="shares")
-    
-    def to_dict(self) -> dict:
-        """Convert share to dictionary"""
-        return {
-            "id": self.id,
-            "share_token": self.share_token,
-            "note_id": self.note_id,
-            "user_id": self.user_id,
-            "permission": self.permission,
-            "has_password": self.password_hash is not None,
-            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
-            "access_count": self.access_count,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "is_active": self.is_active,
-            "is_expired": self.expires_at is not None and self.expires_at < datetime.utcnow(),
-        }
+    owner = relationship("User", back_populates="shares")
     
     def is_valid(self) -> bool:
         """Check if share is valid (active and not expired)"""
@@ -151,6 +99,58 @@ class Share(Base):
         if self.expires_at and self.expires_at < datetime.utcnow():
             return False
         return True
+    
+    def is_expired(self) -> bool:
+        """Check if share is expired"""
+        if self.expires_at and self.expires_at < datetime.utcnow():
+            return True
+        return False
+    
+    def to_dict(self) -> dict:
+        """Convert share to dictionary (exclude sensitive data)"""
+        return {
+            "id": self.id,
+            "token": self.token,
+            "note_id": self.note_id,
+            "permission": self.permission,
+            "is_active": self.is_active,
+            "has_password": self.password_hash is not None,
+            "max_access": self.max_access,
+            "access_count": self.access_count,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "last_accessed_at": self.last_accessed_at.isoformat() if self.last_accessed_at else None,
+            "is_expired": self.is_expired(),
+        }
+    
+    def is_valid(self) -> bool:
+        """Check if share is still valid (active and not expired)"""
+        if not self.is_active:
+            return False
+        if self.expires_at and self.expires_at < datetime.utcnow():
+            return False
+        if self.max_access and self.access_count >= self.max_access:
+            return False
+        return True
+
+
+class UserSession(Base):
+    """User session model"""
+    __tablename__ = "user_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(36), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    is_valid = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    last_activity = Column(DateTime, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    
+    # Relationships
+    user = relationship("User")
 
 
 # Create all tables
@@ -197,115 +197,9 @@ def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
     return db.query(User).filter(User.id == user_id).first()
 
 
-def update_user(db: Session, user_id: int, **kwargs) -> Optional[User]:
-    """Update user"""
-    db_user = db.query(User).filter(User.id == user_id).first()
-    if not db_user:
-        return None
-    
-    for key, value in kwargs.items():
-        if hasattr(db_user, key):
-            setattr(db_user, key, value)
-    
-    db_user.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-
-def delete_user(db: Session, user_id: int) -> bool:
-    """Delete user"""
-    db_user = db.query(User).filter(User.id == user_id).first()
-    if not db_user:
-        return False
-    
-    db.delete(db_user)
-    db.commit()
-    return True
-
-
-# ============== Session CRUD Operations ==============
-
-def create_session(db: Session, user_id: int, ip_address: str = None, user_agent: str = None, expires_days: int = 7) -> UserSession:
-    """Create a new session"""
-    session_id = str(uuid.uuid4())
-    expires_at = datetime.utcnow() + timedelta(days=expires_days)
-    
-    db_session = UserSession(
-        session_id=session_id,
-        user_id=user_id,
-        expires_at=expires_at,
-        ip_address=ip_address,
-        user_agent=user_agent
-    )
-    db.add(db_session)
-    db.commit()
-    db.refresh(db_session)
-    return db_session
-
-
-def get_session(db: Session, session_id: str) -> Optional[UserSession]:
-    """Get session by session_id"""
-    db_session = db.query(UserSession).filter(UserSession.session_id == session_id).first()
-    if db_session:
-        # Check if session is expired
-        if db_session.expires_at < datetime.utcnow():
-            db_session.is_valid = False
-            db.commit()
-        return db_session if db_session.is_valid else None
-    return None
-
-
-def get_user_sessions(db: Session, user_id: int) -> List[UserSession]:
-    """Get all active sessions for a user"""
-    return db.query(UserSession).filter(
-        UserSession.user_id == user_id,
-        UserSession.is_valid == True,
-        UserSession.expires_at > datetime.utcnow()
-    ).all()
-
-
-def delete_session(db: Session, session_id: str) -> bool:
-    """Invalidate a session"""
-    db_session = db.query(UserSession).filter(UserSession.session_id == session_id).first()
-    if not db_session:
-        return False
-    
-    db_session.is_valid = False
-    db.commit()
-    return True
-
-
-def delete_all_user_sessions(db: Session, user_id: int) -> int:
-    """Invalidate all sessions for a user"""
-    sessions = db.query(UserSession).filter(
-        UserSession.user_id == user_id,
-        UserSession.is_valid == True
-    ).all()
-    
-    count = 0
-    for session in sessions:
-        session.is_valid = False
-        count += 1
-    
-    db.commit()
-    return count
-
-
-def cleanup_expired_sessions(db: Session) -> int:
-    """Clean up all expired sessions"""
-    expired = db.query(UserSession).filter(
-        UserSession.expires_at < datetime.utcnow(),
-        UserSession.is_valid == True
-    ).all()
-    
-    count = 0
-    for session in expired:
-        session.is_valid = False
-        count += 1
-    
-    db.commit()
-    return count
+def get_all_users(db: Session) -> List[User]:
+    """Get all users"""
+    return db.query(User).all()
 
 
 # ============== Note CRUD Operations ==============
@@ -411,332 +305,361 @@ def get_all_tags(db: Session, user_id: int = None) -> List[str]:
     return sorted(list(all_tags))
 
 
-# ============== Statistics Operations ==============
-
-def get_notes_statistics(db: Session, user_id: int) -> dict:
-    """Get comprehensive statistics for user's notes"""
-    from sqlalchemy import func
-    
-    # Basic counts
-    total_notes = get_notes_count(db, user_id=user_id)
-    
-    # Total word count (title + content)
-    notes = db.query(Note).filter(Note.user_id == user_id).all()
-    total_words = 0
-    total_chars = 0
-    for note in notes:
-        # Count words in content (split by whitespace)
-        content_words = len(note.content.split()) if note.content else 0
-        title_words = len(note.title.split()) if note.title else 0
-        total_words += content_words + title_words
-        
-        # Count characters (including spaces)
-        total_chars += len(note.content) if note.content else 0
-        total_chars += len(note.title) if note.title else 0
-    
-    # Get first note date (for calculating writing streak)
-    first_note = db.query(Note).filter(
-        Note.user_id == user_id
-    ).order_by(Note.created_at.asc()).first()
-    
-    # Writing activity by date (last 30 days)
-    from datetime import datetime, timedelta
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    
-    activity_query = db.query(
-        func.date(Note.created_at).label('date'),
-        func.count(Note.id).label('count'),
-        func.sum(func.length(Note.content)).label('chars')
-    ).filter(
-        Note.user_id == user_id,
-        Note.created_at >= thirty_days_ago
-    ).group_by(
-        func.date(Note.created_at)
-    ).order_by(func.date(Note.created_at)).all()
-    
-    activity_by_date = [
-        {
-            "date": row.date.isoformat() if row.date else None,
-            "notes_created": row.count,
-            "characters_written": row.chars or 0
-        }
-        for row in activity_query
-    ]
-    
-    # Notes by hour of day (writing habits)
-    hour_distribution = db.query(
-        func.strftime('%H', Note.created_at).label('hour'),
-        func.count(Note.id).label('count')
-    ).filter(
-        Note.user_id == user_id
-    ).group_by(
-        func.strftime('%H', Note.created_at)
-    ).order_by(func.strftime('%H', Note.created_at)).all()
-    
-    hourly_stats = [
-        {"hour": int(row.hour), "count": row.count}
-        for row in hour_distribution
-    ]
-    
-    # Notes by day of week
-    weekday_distribution = db.query(
-        func.strftime('%w', Note.created_at).label('weekday'),
-        func.count(Note.id).label('count')
-    ).filter(
-        Note.user_id == user_id
-    ).group_by(
-        func.strftime('%w', Note.created_at)
-    ).order_by(func.strftime('%w', Note.created_at)).all()
-    
-    weekday_names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-    weekday_stats = [
-        {"day": weekday_names[int(row.weekday)], "count": row.count}
-        for row in weekday_distribution
-    ]
-    
-    # Calculate writing streak (consecutive days with notes)
-    streak = 0
-    if activity_by_date:
-        today = datetime.utcnow().date()
-        # Check if wrote today
-        wrote_today = any(
-            datetime.fromisoformat(a['date']).date() == today 
-            for a in activity_by_date
-        )
-        
-        # Start from today or yesterday
-        check_date = today if wrote_today else today - timedelta(days=1)
-        
-        all_activity_dates = set(
-            datetime.fromisoformat(a['date']).date() 
-            for a in activity_by_date
-        )
-        
-        while check_date in all_activity_dates:
-            streak += 1
-            check_date -= timedelta(days=1)
-    
-    # Average stats
-    avg_words_per_note = round(total_words / total_notes, 1) if total_notes > 0 else 0
-    avg_chars_per_note = round(total_chars / total_notes, 1) if total_notes > 0 else 0
-    
-    # Notes created this week
-    week_ago = datetime.utcnow() - timedelta(days=7)
-    notes_this_week = db.query(Note).filter(
-        Note.user_id == user_id,
-        Note.created_at >= week_ago
-    ).count()
-    
-    # Notes created this month
-    month_ago = datetime.utcnow() - timedelta(days=30)
-    notes_this_month = db.query(Note).filter(
-        Note.user_id == user_id,
-        Note.created_at >= month_ago
-    ).count()
-    
-    return {
-        "total_notes": total_notes,
-        "total_words": total_words,
-        "total_characters": total_chars,
-        "avg_words_per_note": avg_words_per_note,
-        "avg_characters_per_note": avg_chars_per_note,
-        "notes_this_week": notes_this_week,
-        "notes_this_month": notes_this_month,
-        "current_streak": streak,
-        "first_note_date": first_note.created_at.isoformat() if first_note else None,
-        "activity_by_date": activity_by_date,
-        "hourly_distribution": hourly_stats,
-        "weekday_distribution": weekday_stats
-    }
-
-
-def get_daily_writing_stats(db: Session, user_id: int, days: int = 7) -> List[dict]:
-    """Get daily writing statistics for the specified number of days"""
-    from sqlalchemy import func
-    from datetime import datetime, timedelta
-    
-    start_date = datetime.utcnow() - timedelta(days=days)
-    
-    query = db.query(
-        func.date(Note.created_at).label('date'),
-        func.count(Note.id).label('note_count'),
-        func.sum(func.length(Note.content)).label('total_chars'),
-        func.avg(func.length(Note.content)).label('avg_chars')
-    ).filter(
-        Note.user_id == user_id,
-        Note.created_at >= start_date
-    ).group_by(
-        func.date(Note.created_at)
-    ).order_by(func.date(Note.created_at)).all()
-    
-    return [
-        {
-            "date": row.date.isoformat() if row.date else None,
-            "notes_created": row.note_count,
-            "total_characters": row.total_chars or 0,
-            "avg_characters": round(row.avg_chars, 1) if row.avg_chars else 0
-        }
-        for row in query
-    ]
-
-
 # ============== Share CRUD Operations ==============
 
+import secrets
+
 def generate_share_token() -> str:
-    """Generate a short share token (8 characters)"""
-    import secrets
-    import string
-    # 使用 URL-safe 字符，8位长度，包含大小写字母和数字
-    alphabet = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(8))
+    """Generate a unique share token"""
+    return secrets.token_urlsafe(32)
 
 
 def create_share(
-    db: Session, 
-    note_id: int, 
-    user_id: int, 
-    permission: str = "public", 
+    db: Session,
+    note_id: int,
+    owner_id: int,
     password: str = None,
+    max_access: int = None,
     expires_days: int = None
-) -> Share:
+) -> Optional[Share]:
     """Create a new share for a note"""
+    # Verify note exists and belongs to owner
+    note = get_note(db, note_id, user_id=owner_id)
+    if not note:
+        return None
+    
     # Generate unique token
-    while True:
-        share_token = generate_share_token()
-        existing = db.query(Share).filter(Share.share_token == share_token).first()
-        if not existing:
-            break
+    token = generate_share_token()
+    while db.query(Share).filter(Share.token == token).first():
+        token = generate_share_token()
     
     # Hash password if provided
     password_hash = None
     if password:
-        import hashlib
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        from app.auth import get_password_hash
+        password_hash = get_password_hash(password)
     
     # Calculate expiration
     expires_at = None
     if expires_days:
         expires_at = datetime.utcnow() + timedelta(days=expires_days)
     
-    db_share = Share(
-        share_token=share_token,
+    # Create share
+    share = Share(
         note_id=note_id,
-        user_id=user_id,
-        permission=permission,
+        owner_id=owner_id,
+        token=token,
         password_hash=password_hash,
+        max_access=max_access,
         expires_at=expires_at
     )
-    db.add(db_share)
+    db.add(share)
     db.commit()
-    db.refresh(db_share)
-    return db_share
-
-
-def get_share_by_token(db: Session, share_token: str) -> Optional[Share]:
-    """Get share by token"""
-    return db.query(Share).filter(Share.share_token == share_token).first()
-
-
-def get_share_by_token_with_note(db: Session, share_token: str) -> Optional[Share]:
-    """Get share by token with note loaded"""
-    share = db.query(Share).filter(Share.share_token == share_token).first()
+    db.refresh(share)
+    
     return share
 
 
-def get_shares_by_note(db: Session, note_id: int, user_id: int = None) -> List[Share]:
-    """Get all shares for a note, optionally filtered by user"""
-    query = db.query(Share).filter(Share.note_id == note_id)
-    if user_id is not None:
-        query = query.filter(Share.user_id == user_id)
-    return query.order_by(Share.created_at.desc()).all()
+def get_share_by_token(db: Session, token: str) -> Optional[Share]:
+    """Get share by token"""
+    return db.query(Share).filter(Share.token == token).first()
 
 
-def get_all_user_shares(db: Session, user_id: int) -> List[Share]:
-    """Get all shares created by a user"""
-    return db.query(Share).filter(Share.user_id == user_id).order_by(Share.created_at.desc()).all()
-
-
-def verify_share_password(db: Session, share_token: str, password: str) -> bool:
-    """Verify share password"""
-    share = get_share_by_token(db, share_token)
-    if not share or not share.password_hash:
-        return False
-    import hashlib
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    return share.password_hash == password_hash
-
-
-def increment_share_access_count(db: Session, share_token: str) -> bool:
-    """Increment access count for a share"""
-    share = get_share_by_token(db, share_token)
-    if not share:
-        return False
-    share.access_count += 1
-    db.commit()
-    return True
-
-
-def update_share(
-    db: Session, 
-    share_token: str, 
-    user_id: int, 
-    **kwargs
-) -> Optional[Share]:
-    """Update a share (must belong to user)"""
-    share = db.query(Share).filter(
-        Share.share_token == share_token,
-        Share.user_id == user_id
-    ).first()
-    
+def verify_share_access(db: Session, token: str, password: str = None) -> Optional[dict]:
+    """
+    Verify if a share is accessible.
+    Returns note dict if accessible, None otherwise.
+    """
+    share = get_share_by_token(db, token)
     if not share:
         return None
     
-    allowed_fields = ['permission', 'is_active', 'expires_at']
-    for key, value in kwargs.items():
-        if key in allowed_fields:
-            setattr(share, key, value)
+    # Check if share is active
+    if not share.is_active:
+        return None
     
-    # Handle password update separately
-    if 'password' in kwargs:
-        password = kwargs['password']
-        if password:
-            import hashlib
-            share.password_hash = hashlib.sha256(password.encode()).hexdigest()
-        else:
-            share.password_hash = None
+    # Check expiration
+    if share.expires_at and share.expires_at < datetime.utcnow():
+        return None
     
-    share.updated_at = datetime.utcnow()
+    # Check max access
+    if share.max_access and share.access_count >= share.max_access:
+        return None
+    
+    # Verify password if required
+    if share.password_hash:
+        if not password:
+            return {"error": "password_required", "share": share.to_dict()}
+        from app.auth import verify_password
+        if not verify_password(password, share.password_hash):
+            return {"error": "invalid_password", "share": share.to_dict()}
+    
+    # Increment access count
+    share.access_count += 1
+    share.last_accessed_at = datetime.utcnow()
     db.commit()
-    db.refresh(share)
-    return share
-
-
-def delete_share(db: Session, share_token: str, user_id: int = None) -> bool:
-    """Delete a share, optionally ensuring it belongs to user"""
-    query = db.query(Share).filter(Share.share_token == share_token)
-    if user_id is not None:
-        query = query.filter(Share.user_id == user_id)
     
-    share = query.first()
+    # Get note
+    note = share.note
+    return {
+        "note": note.to_dict(),
+        "share": share.to_dict()
+    }
+
+
+def revoke_share(db: Session, share_id: int, owner_id: int) -> bool:
+    """Revoke a share (deactivate)"""
+    share = db.query(Share).filter(
+        Share.id == share_id,
+        Share.owner_id == owner_id
+    ).first()
     if not share:
         return False
     
-    db.delete(share)
+    share.is_active = False
     db.commit()
     return True
 
 
-def cleanup_expired_shares(db: Session) -> int:
-    """Deactivate all expired shares"""
-    expired = db.query(Share).filter(
-        Share.expires_at < datetime.utcnow(),
-        Share.is_active == True
+def get_note_shares(db: Session, note_id: int, owner_id: int) -> List[Share]:
+    """Get all shares for a note (owner only)"""
+    return db.query(Share).filter(
+        Share.note_id == note_id,
+        Share.owner_id == owner_id
     ).all()
-    
-    count = 0
-    for share in expired:
+
+
+def revoke_all_shares_for_note(db: Session, note_id: int, owner_id: int) -> int:
+    """Revoke all shares for a note"""
+    shares = db.query(Share).filter(
+        Share.note_id == note_id,
+        Share.owner_id == owner_id
+    ).all()
+    count = len(shares)
+    for share in shares:
         share.is_active = False
-        count += 1
-    
     db.commit()
     return count
+
+
+# ============== Session CRUD Operations ==============
+
+import uuid
+
+def create_session(db: Session, user_id: int, ip_address: str = None, user_agent: str = None, expires_days: int = 7) -> str:
+    """Create a new session for a user and return the session token"""
+    session_id = str(uuid.uuid4())
+    expires_at = datetime.utcnow() + timedelta(days=expires_days)
+    
+    db_session = UserSession(
+        session_id=session_id,
+        user_id=user_id,
+        expires_at=expires_at,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    db.add(db_session)
+    db.commit()
+    db.refresh(db_session)
+    return session_id
+
+
+def get_session(db: Session, session_id: str) -> Optional[UserSession]:
+    """Get session by session_id"""
+    db_session = db.query(UserSession).filter(UserSession.session_id == session_id).first()
+    if db_session:
+        # Check if session is expired
+        if db_session.expires_at < datetime.utcnow():
+            db_session.is_valid = False
+            db.commit()
+        return db_session if db_session.is_valid else None
+    return None
+
+
+def get_user_sessions(db: Session, user_id: int) -> List[UserSession]:
+    """Get all active sessions for a user"""
+    return db.query(UserSession).filter(
+        UserSession.user_id == user_id,
+        UserSession.is_valid == True,
+        UserSession.expires_at > datetime.utcnow()
+    ).all()
+
+
+def delete_session(db: Session, session_id: str) -> bool:
+    """Invalidate a session"""
+    db_session = db.query(UserSession).filter(UserSession.session_id == session_id).first()
+    if not db_session:
+        return False
+    
+    db_session.is_valid = False
+    db.commit()
+    return True
+
+
+def delete_all_user_sessions(db: Session, user_id: int) -> int:
+    """Invalidate all sessions for a user"""
+    sessions = db.query(UserSession).filter(
+        UserSession.user_id == user_id,
+        UserSession.is_valid == True
+    ).all()
+    count = len(sessions)
+    for session in sessions:
+        session.is_valid = False
+    db.commit()
+    return count
+
+
+def cleanup_expired_sessions(db: Session) -> int:
+    """Clean up all expired sessions"""
+    expired = db.query(UserSession).filter(
+        UserSession.expires_at < datetime.utcnow(),
+        UserSession.is_valid == True
+    ).all()
+    count = len(expired)
+    for session in expired:
+        session.is_valid = False
+    db.commit()
+    return count
+
+
+# ============== Statistics Operations ==============
+
+def get_notes_statistics(db: Session, user_id: int) -> dict:
+    """Get detailed writing statistics for a user"""
+    from sqlalchemy import func
+    
+    # Get all notes for user
+    notes = db.query(Note).filter(Note.user_id == user_id).all()
+    
+    if not notes:
+        return {
+            "total_notes": 0,
+            "total_words": 0,
+            "total_characters": 0,
+            "avg_words_per_note": 0.0,
+            "avg_characters_per_note": 0.0,
+            "notes_this_week": 0,
+            "notes_this_month": 0,
+            "current_streak": 0,
+            "first_note_date": None,
+            "activity_by_date": [],
+            "hourly_distribution": [],
+            "weekday_distribution": []
+        }
+    
+    # Basic counts
+    total_notes = len(notes)
+    total_chars = sum(len(note.content) for note in notes)
+    total_words = sum(len(note.content.split()) for note in notes)
+    
+    # Date calculations
+    now = datetime.utcnow()
+    week_start = now - timedelta(days=now.weekday())
+    month_start = now.replace(day=1)
+    
+    notes_this_week = sum(1 for note in notes if note.created_at >= week_start)
+    notes_this_month = sum(1 for note in notes if note.created_at >= month_start)
+    
+    # First note date
+    first_note = min(notes, key=lambda x: x.created_at)
+    first_note_date = first_note.created_at.isoformat() if first_note else None
+    
+    # Calculate writing streak
+    writing_days = set()
+    for note in notes:
+        writing_days.add(note.created_at.date())
+    
+    current_streak = 0
+    today = now.date()
+    for i in range(365):  # Check up to 1 year back
+        check_date = today - timedelta(days=i)
+        if check_date in writing_days:
+            current_streak += 1
+        else:
+            if i > 0:  # Break if not consecutive from today
+                break
+    
+    # Activity by date (last 30 days)
+    activity_by_date = []
+    for i in range(29, -1, -1):
+        date = (now - timedelta(days=i)).date()
+        day_notes = [n for n in notes if n.created_at.date() == date]
+        if day_notes or True:  # Include empty days for complete chart
+            activity_by_date.append({
+                "date": date.isoformat(),
+                "notes_created": len(day_notes),
+                "characters_written": sum(len(n.content) for n in day_notes)
+            })
+    
+    # Hourly distribution
+    hourly_counts = [0] * 24
+    for note in notes:
+        hour = note.created_at.hour
+        hourly_counts[hour] += 1
+    
+    hourly_distribution = [
+        {"hour": h, "count": c} for h, c in enumerate(hourly_counts)
+    ]
+    
+    # Weekday distribution
+    weekday_names = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    weekday_counts = [0] * 7
+    for note in notes:
+        # weekday() returns 0=Monday, 6=Sunday
+        weekday = note.created_at.weekday()
+        weekday_counts[weekday] += 1
+    
+    weekday_distribution = [
+        {"day": weekday_names[i], "count": c} for i, c in enumerate(weekday_counts)
+    ]
+    
+    return {
+        "total_notes": total_notes,
+        "total_words": total_words,
+        "total_characters": total_chars,
+        "avg_words_per_note": round(total_words / total_notes, 1),
+        "avg_characters_per_note": round(total_chars / total_notes, 1),
+        "notes_this_week": notes_this_week,
+        "notes_this_month": notes_this_month,
+        "current_streak": current_streak,
+        "first_note_date": first_note_date,
+        "activity_by_date": activity_by_date,
+        "hourly_distribution": hourly_distribution,
+        "weekday_distribution": weekday_distribution
+    }
+
+
+def get_daily_writing_stats(db: Session, user_id: int, days: int = 7) -> List[dict]:
+    """Get daily writing statistics for the specified number of days"""
+    now = datetime.utcnow()
+    start_date = now - timedelta(days=days)
+    
+    # Get notes in date range
+    notes = db.query(Note).filter(
+        Note.user_id == user_id,
+        Note.created_at >= start_date
+    ).all()
+    
+    # Group by date
+    stats_by_date = {}
+    for i in range(days):
+        date = (now - timedelta(days=days - 1 - i)).date()
+        stats_by_date[date.isoformat()] = {
+            "date": date.isoformat(),
+            "notes_created": 0,
+            "total_characters": 0,
+            "avg_characters": 0.0
+        }
+    
+    for note in notes:
+        date_key = note.created_at.date().isoformat()
+        if date_key in stats_by_date:
+            stats_by_date[date_key]["notes_created"] += 1
+            stats_by_date[date_key]["total_characters"] += len(note.content)
+    
+    # Calculate averages
+    for date_key, stat in stats_by_date.items():
+        if stat["notes_created"] > 0:
+            stat["avg_characters"] = round(stat["total_characters"] / stat["notes_created"], 1)
+    
+    return list(stats_by_date.values())

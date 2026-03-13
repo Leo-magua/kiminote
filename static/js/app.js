@@ -372,6 +372,9 @@ async function openNote(id) {
         elements.aiActions.style.display = isAiAvailable ? 'flex' : 'none';
         elements.aiEnhanceBtn.style.display = isAiAvailable ? 'inline-block' : 'none';
         
+        // Show share button
+        elements.shareBtn.style.display = 'inline-block';
+        
         showView('edit');
         updatePreview();
     } catch (error) {
@@ -412,6 +415,9 @@ async function createNewNote() {
     elements.noteDates.innerHTML = '';
     elements.aiActions.style.display = isAiAvailable ? 'flex' : 'none';
     elements.aiEnhanceBtn.style.display = isAiAvailable ? 'inline-block' : 'none';
+    
+    // Hide share button for new notes
+    elements.shareBtn.style.display = 'none';
     
     showView('edit');
     elements.noteTitle.focus();
@@ -717,6 +723,7 @@ elements.modalCloseBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         toggleModal(elements.smartSearchModal, false);
         toggleModal(elements.aiEnhanceModal, false);
+        toggleModal(elements.shareModal, false);
     });
 });
 
@@ -760,7 +767,9 @@ document.addEventListener('keydown', (e) => {
     
     // Esc to go back
     if (e.key === 'Escape') {
-        if (!elements.smartSearchModal.classList.contains('hidden')) {
+        if (!elements.shareModal.classList.contains('hidden')) {
+            toggleModal(elements.shareModal, false);
+        } else if (!elements.smartSearchModal.classList.contains('hidden')) {
             toggleModal(elements.smartSearchModal, false);
         } else if (!elements.aiEnhanceModal.classList.contains('hidden')) {
             toggleModal(elements.aiEnhanceModal, false);
@@ -778,3 +787,222 @@ async function init() {
 }
 
 init();
+
+// ========== Share Functions ==========
+
+// Open share modal
+function openShareModal() {
+    if (!currentNote) {
+        showToast('请先保存笔记', 'error');
+        return;
+    }
+    
+    // Reset form
+    elements.sharePermission.value = 'public';
+    elements.sharePassword.value = '';
+    elements.shareExpires.value = '7';
+    elements.passwordGroup.style.display = 'none';
+    
+    // Show create form, hide result
+    elements.createShareForm.classList.remove('hidden');
+    elements.shareResult.classList.add('hidden');
+    elements.existingShares.classList.remove('hidden');
+    
+    // Load existing shares
+    loadNoteShares();
+    
+    toggleModal(elements.shareModal, true);
+}
+
+// Load shares for current note
+async function loadNoteShares() {
+    if (!currentNote) return;
+    
+    try {
+        const result = await api.get(`/api/shares/note/${currentNote.id}`);
+        currentShares = result.shares;
+        renderSharesList();
+    } catch (error) {
+        console.error('Failed to load shares:', error);
+        elements.sharesList.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">加载分享列表失败</p>';
+    }
+}
+
+// Render shares list
+function renderSharesList() {
+    if (currentShares.length === 0) {
+        elements.sharesList.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">暂无分享链接</p>';
+        return;
+    }
+    
+    elements.sharesList.innerHTML = currentShares.map(share => {
+        const isExpired = share.is_expired;
+        const permissionText = {
+            'public': '🔓 公开',
+            'password': '🔐 密码',
+            'private': '🔒 私密'
+        }[share.permission] || share.permission;
+        
+        const expiresText = share.expires_at 
+            ? new Date(share.expires_at).toLocaleDateString('zh-CN')
+            : '永不过期';
+        
+        return `
+            <div class="share-item ${isExpired ? 'expired' : ''}">
+                <div class="share-item-info">
+                    <div class="share-item-url">${share.share_url}</div>
+                    <div class="share-item-meta">
+                        <span class="share-badge ${share.permission} ${isExpired ? 'expired' : ''}">${permissionText}</span>
+                        <span>过期: ${expiresText}</span>
+                        <span>访问: ${share.access_count}次</span>
+                    </div>
+                </div>
+                <div class="share-item-actions">
+                    <button class="share-item-btn copy-btn" data-token="${share.share_token}" title="复制链接">📋</button>
+                    <button class="share-item-btn delete-btn" data-token="${share.share_token}" title="删除">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add event listeners
+    document.querySelectorAll('.share-item-btn.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const share = currentShares.find(s => s.share_token === btn.dataset.token);
+            if (share) {
+                copyToClipboard(share.share_url);
+                showToast('链接已复制');
+            }
+        });
+    });
+    
+    document.querySelectorAll('.share-item-btn.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteShare(btn.dataset.token));
+    });
+}
+
+// Create share
+async function createShare() {
+    if (!currentNote) return;
+    
+    const permission = elements.sharePermission.value;
+    const password = elements.sharePassword.value;
+    const expiresDays = elements.shareExpires.value ? parseInt(elements.shareExpires.value) : null;
+    
+    // Validate password for password-protected shares
+    if (permission === 'password' && (!password || password.length < 4)) {
+        showToast('请输入至少4位密码', 'error');
+        elements.sharePassword.focus();
+        return;
+    }
+    
+    elements.createShareBtn.innerHTML = '<span class="spinner"></span> 创建中...';
+    elements.createShareBtn.disabled = true;
+    
+    try {
+        const result = await api.post('/api/shares', {
+            note_id: currentNote.id,
+            permission: permission,
+            password: password || null,
+            expires_days: expiresDays
+        });
+        
+        // Show result
+        elements.createShareForm.classList.add('hidden');
+        elements.shareResult.classList.remove('hidden');
+        elements.existingShares.classList.add('hidden');
+        
+        // Fill result
+        elements.shareUrlInput.value = result.share_url;
+        
+        const permissionLabels = {
+            'public': '🔓 公开访问',
+            'password': '🔐 密码保护',
+            'private': '🔒 私密（仅自己）'
+        };
+        elements.shareInfoPermission.textContent = permissionLabels[result.permission] || result.permission;
+        
+        elements.shareInfoExpires.textContent = result.expires_at 
+            ? new Date(result.expires_at).toLocaleString('zh-CN')
+            : '永不过期';
+        
+        showToast('分享链接创建成功');
+    } catch (error) {
+        showToast('创建分享失败: ' + error.message, 'error');
+    } finally {
+        elements.createShareBtn.innerHTML = '创建分享';
+        elements.createShareBtn.disabled = false;
+    }
+}
+
+// Delete share
+async function deleteShare(shareToken) {
+    if (!confirm('确定要删除这个分享链接吗？')) return;
+    
+    try {
+        await api.delete(`/api/shares/${shareToken}`);
+        showToast('分享链接已删除');
+        loadNoteShares(); // Refresh list
+    } catch (error) {
+        showToast('删除失败: ' + error.message, 'error');
+    }
+}
+
+// Copy to clipboard
+function copyToClipboard(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+    } else {
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+    }
+}
+
+// Reset share modal
+function resetShareModal() {
+    elements.sharePermission.value = 'public';
+    elements.sharePassword.value = '';
+    elements.shareExpires.value = '7';
+    elements.passwordGroup.style.display = 'none';
+    elements.createShareForm.classList.remove('hidden');
+    elements.shareResult.classList.add('hidden');
+    elements.existingShares.classList.remove('hidden');
+}
+
+// Share event listeners
+elements.shareBtn.addEventListener('click', openShareModal);
+
+elements.sharePermission.addEventListener('change', () => {
+    const showPassword = elements.sharePermission.value === 'password';
+    elements.passwordGroup.style.display = showPassword ? 'block' : 'none';
+    if (showPassword) {
+        elements.sharePassword.focus();
+    }
+});
+
+elements.createShareBtn.addEventListener('click', createShare);
+
+elements.copyShareUrlBtn.addEventListener('click', () => {
+    copyToClipboard(elements.shareUrlInput.value);
+    showToast('链接已复制到剪贴板');
+});
+
+elements.createNewShareBtn.addEventListener('click', resetShareModal);
+
+elements.closeShareBtn.addEventListener('click', () => {
+    toggleModal(elements.shareModal, false);
+});
+
+// Close share modal when clicking outside
+window.addEventListener('click', (e) => {
+    if (e.target === elements.shareModal) {
+        toggleModal(elements.shareModal, false);
+    }
+});
