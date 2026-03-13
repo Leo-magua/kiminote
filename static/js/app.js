@@ -677,6 +677,9 @@ async function openNote(id) {
         // Set content to editor
         setEditorContent(currentNote.content);
         
+        // Load attachments
+        await renderAttachmentList();
+        
         renderNoteMeta();
         
         // Show AI actions if available
@@ -721,6 +724,7 @@ function renderNoteMeta() {
 // Create new note
 async function createNewNote() {
     currentNote = null;
+    currentAttachments = [];
     elements.noteTitle.value = '';
     elements.markdownContent.value = '';
     
@@ -728,6 +732,9 @@ async function createNewNote() {
     if (richTextEditor) {
         richTextEditor.setHTML('');
     }
+    
+    // Clear attachment list
+    await renderAttachmentList();
     
     elements.noteTags.innerHTML = '';
     elements.noteSummary.innerHTML = '';
@@ -760,11 +767,19 @@ async function saveNote() {
             // Update existing
             const result = await api.put(`/api/notes/${currentNote.id}`, { title, content });
             currentNote = result;
+            
+            // Update attachment associations
+            await updateNoteAttachments(currentNote.id);
+            
             showToast('笔记已更新');
         } else {
             // Create new
             const result = await api.post('/api/notes', { title, content });
             currentNote = result;
+            
+            // Update attachment associations
+            await updateNoteAttachments(currentNote.id);
+            
             showToast('笔记已创建');
             
             // Show share button after creation
@@ -774,9 +789,107 @@ async function saveNote() {
         // Reload notes
         await loadNotes();
         renderNoteMeta();
+        await renderAttachmentList();
     } catch (error) {
         showToast('保存失败: ' + error.message, 'error');
     }
+}
+
+// Update attachment associations for current note
+async function updateNoteAttachments(noteId) {
+    if (!currentAttachments || currentAttachments.length === 0) return;
+    
+    try {
+        const attachmentIds = currentAttachments.map(att => att.id);
+        await api.put(`/api/notes/${noteId}/attachments`, attachmentIds);
+    } catch (error) {
+        console.error('Failed to update attachments:', error);
+    }
+}
+
+// Render attachment list
+async function renderAttachmentList() {
+    const container = document.getElementById('attachmentList');
+    if (!container) return;
+    
+    if (!currentNote || !currentAttachments || currentAttachments.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    // Fetch attachments from server
+    try {
+        const result = await api.get(`/api/notes/${currentNote.id}/attachments`);
+        currentAttachments = result.attachments || [];
+    } catch (error) {
+        console.error('Failed to load attachments:', error);
+    }
+    
+    if (currentAttachments.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="attachment-section">
+            <h4>📎 附件 (${currentAttachments.length})</h4>
+            <div class="attachment-items">
+                ${currentAttachments.map(att => `
+                    <div class="attachment-item" data-id="${att.id}">
+                        <span class="attachment-icon">${getFileIcon(att.original_filename || att.filename)}</span>
+                        <a href="${att.url}" target="_blank" class="attachment-name">${escapeHtml(att.original_filename || att.filename)}</a>
+                        <span class="attachment-size">${formatFileSize(att.file_size)}</span>
+                        <button class="attachment-remove" data-id="${att.id}" title="删除">×</button>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    // Add remove handlers
+    container.querySelectorAll('.attachment-remove').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const id = parseInt(btn.dataset.id);
+            if (confirm('确定要删除这个附件吗？')) {
+                try {
+                    await api.delete(`/api/attachments/${id}`);
+                    currentAttachments = currentAttachments.filter(a => a.id !== id);
+                    renderAttachmentList();
+                    showToast('附件已删除');
+                } catch (error) {
+                    showToast('删除附件失败: ' + error.message, 'error');
+                }
+            }
+        });
+    });
+}
+
+// Get file icon based on extension
+function getFileIcon(filename) {
+    const ext = (filename || '').split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': '📄',
+        'doc': '📝', 'docx': '📝',
+        'xls': '📊', 'xlsx': '📊',
+        'ppt': '📈', 'pptx': '📈',
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'webp': '🖼️', 'svg': '🖼️',
+        'mp4': '🎬', 'avi': '🎬', 'mov': '🎬',
+        'mp3': '🎵', 'wav': '🎵',
+        'zip': '📦', 'rar': '📦', '7z': '📦',
+        'txt': '📃', 'md': '📃',
+        'json': '⚙️', 'js': '⚙️', 'py': '⚙️', 'html': '⚙️', 'css': '⚙️'
+    };
+    return icons[ext] || '📎';
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 // Delete note

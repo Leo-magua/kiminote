@@ -576,12 +576,57 @@ async def update_existing_note(
     return note.to_dict()
 
 
+@app.put(
+    "/api/notes/{note_id}/attachments",
+    response_model=schemas.MessageResponse,
+    tags=["Notes"],
+    summary="更新笔记附件关联",
+    description="将临时上传的附件关联到指定笔记。",
+    responses={
+        200: {"description": "附件关联成功", "model": schemas.MessageResponse},
+        401: {"description": "未认证", "model": schemas.ErrorResponse},
+        404: {"description": "笔记不存在", "model": schemas.ErrorResponse},
+    }
+)
+async def update_note_attachments(
+    note_id: int,
+    attachment_ids: List[int],
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update attachment associations for a note"""
+    note = get_note(db, note_id, user_id=current_user["id"])
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    from app.database import Attachment
+    
+    # First, reset all attachments for this note to note_id=0
+    existing_attachments = db.query(Attachment).filter(
+        Attachment.note_id == note_id
+    ).all()
+    for att in existing_attachments:
+        att.note_id = 0
+    
+    # Then, associate new attachments
+    for att_id in attachment_ids:
+        attachment = db.query(Attachment).filter(
+            Attachment.id == att_id,
+            Attachment.user_id == current_user["id"]
+        ).first()
+        if attachment:
+            attachment.note_id = note_id
+    
+    db.commit()
+    return {"message": "Attachments updated successfully"}
+
+
 @app.delete(
     "/api/notes/{note_id}",
     response_model=schemas.MessageResponse,
     tags=["Notes"],
     summary="删除笔记",
-    description="删除指定 ID 的笔记。只能删除自己的笔记。",
+    description="删除指定 ID 的笔记。只能删除自己的笔记。关联的附件文件也将被删除。",
     responses={
         200: {"description": "删除成功", "model": schemas.MessageResponse},
         401: {"description": "未认证", "model": schemas.ErrorResponse},
@@ -594,6 +639,22 @@ async def delete_note_by_id(
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a note (must belong to current user)"""
+    # Get attachments before deleting note
+    attachments = get_note_attachments(db, note_id)
+    
+    # Delete attachment files from disk
+    for attachment in attachments:
+        try:
+            file_path = Path(attachment.file_path)
+            if file_path.exists():
+                file_path.unlink()
+        except Exception as e:
+            print(f"Failed to delete attachment file: {e}")
+    
+    # Delete attachment records
+    delete_note_attachments(db, note_id)
+    
+    # Delete the note
     success = delete_note(db, note_id, user_id=current_user["id"])
     if not success:
         raise HTTPException(status_code=404, detail="Note not found")
