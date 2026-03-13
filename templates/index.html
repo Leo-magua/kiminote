@@ -6,6 +6,8 @@
     <title>{{ app_name }}</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
@@ -18,6 +20,18 @@
                 <div class="ai-status {{ 'ai-available' if ai_available else 'ai-unavailable' }}">
                     {{ 'AI 已启用' if ai_available else 'AI 未配置' }}
                 </div>
+            </div>
+            
+            <!-- User Info -->
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name">{{ user.username }}</span>
+                        <span class="user-label">当前用户</span>
+                    </div>
+                </div>
+                <button id="logoutBtn" class="btn-logout" title="退出登录">🚪</button>
             </div>
             
             <div class="search-box">
@@ -164,6 +178,7 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
     
+    <script src="/static/js/auth.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

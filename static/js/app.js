@@ -2,6 +2,69 @@
  * AI Notes - Frontend Application
  */
 
+// Configure marked.js options
+marked.setOptions({
+    gfm: true,              // GitHub Flavored Markdown
+    breaks: true,           // Convert line breaks to <br>
+    tables: true,           // Enable tables
+    sanitize: false,        // Disable built-in sanitization (we use DOMPurify)
+    smartLists: true,       // Use smarter list behavior
+    smartypants: true,      // Use smart punctuation
+    highlight: function(code, lang) {
+        // Use highlight.js for syntax highlighting
+        if (lang && hljs.getLanguage(lang)) {
+            try {
+                return hljs.highlight(code, { language: lang }).value;
+            } catch (e) {
+                console.warn('Highlight error:', e);
+            }
+        }
+        // Auto-detect language if not specified
+        try {
+            return hljs.highlightAuto(code).value;
+        } catch (e) {
+            console.warn('Auto-highlight error:', e);
+        }
+        return code;
+    }
+});
+
+// Custom renderer for task lists
+const renderer = new marked.Renderer();
+const originalListitem = renderer.listitem;
+renderer.listitem = function(text, task, checked) {
+    if (task) {
+        return `<li class="task-list-item">
+            <input type="checkbox" ${checked ? 'checked' : ''} disabled> 
+            ${text.replace(/^\[x\]\s*|^\[ \]\s*/, '')}
+        </li>`;
+    }
+    return originalListitem.call(this, text, task, checked);
+};
+marked.setOptions({ renderer: renderer });
+
+// XSS Sanitization configuration
+const DOMPURIFY_CONFIG = {
+    ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'b', 'em', 'i', 'u', 'strike', 'del', 's',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li', 'task-list-item',
+        'blockquote', 'code', 'pre',
+        'a', 'img',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'div', 'span', 'hr',
+        'input'  // For task list checkboxes
+    ],
+    ALLOWED_ATTR: [
+        'href', 'title', 'target', 'rel',
+        'src', 'alt', 'width', 'height',
+        'class', 'id',
+        'checked', 'type', 'disabled'  // For task list checkboxes
+    ],
+    ALLOW_DATA_ATTR: false,
+    SANITIZE_DOM: true
+};
+
 // Global state
 let currentNote = null;
 let allNotes = [];
@@ -419,7 +482,15 @@ async function checkAiStatus() {
 // Update markdown preview
 function updatePreview() {
     const content = elements.noteContent.value;
-    const html = marked.parse(content);
+    
+    // Parse markdown
+    let html = marked.parse(content);
+    
+    // Sanitize HTML to prevent XSS attacks
+    if (typeof DOMPurify !== 'undefined') {
+        html = DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
+    }
+    
     elements.previewContent.innerHTML = html;
     
     // Apply syntax highlighting
@@ -646,6 +717,9 @@ elements.exportMdBtn.addEventListener('click', async () => {
         showToast('导出失败: ' + error.message, 'error');
     }
 });
+
+// Logout button
+document.getElementById('logoutBtn').addEventListener('click', logout);
 
 // Close modal when clicking outside
 window.addEventListener('click', (e) => {

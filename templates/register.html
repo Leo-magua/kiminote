@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - {{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="auth-logo">📝</div>
+                <h1>{{ app_name }}</h1>
+                <p>创建新账户</p>
+            </div>
+            
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="username">用户名 *</label>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="3-50个字符，仅限字母、数字、下划线" 
+                           pattern="[a-zA-Z0-9_]{3,50}" 
+                           title="用户名需要3-50个字符，只能包含字母、数字、下划线"
+                           autofocus>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">邮箱（可选）</label>
+                    <input type="email" id="email" name="email" 
+                           placeholder="your@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">密码 *</label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="至少6个字符"
+                           minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="passwordConfirm">确认密码 *</label>
+                    <input type="password" id="passwordConfirm" name="passwordConfirm" required 
+                           placeholder="再次输入密码">
+                </div>
+                
+                <button type="submit" class="btn-primary btn-full" id="registerBtn">
+                    注册
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>已有账户？<a href="/login">立即登录</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Register form handling
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('passwordConfirm').value;
+            const registerBtn = document.getElementById('registerBtn');
+            
+            // Validation
+            if (!username || !password) {
+                showToast('请填写用户名和密码', 'error');
+                return;
+            }
+            
+            if (username.length < 3) {
+                showToast('用户名至少需要3个字符', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showToast('密码至少需要6个字符', 'error');
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                showToast('两次输入的密码不一致', 'error');
+                return;
+            }
+            
+            // Show loading
+            registerBtn.innerHTML = '<span class="spinner"></span> 注册中...';
+            registerBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username, 
+                        email: email || null, 
+                        password 
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast('注册成功！正在跳转到登录页面...');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1000);
+                } else {
+                    const error = await response.text();
+                    showToast('注册失败：' + (error.includes('{') ? JSON.parse(error).detail : error), 'error');
+                }
+            } catch (error) {
+                showToast('注册失败：' + error.message, 'error');
+            } finally {
+                registerBtn.innerHTML = '注册';
+                registerBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 Configuration management for AI Notes
 """
 import os
+import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -36,3 +37,9 @@ PORT = int(os.getenv("PORT", "8000"))
 MAX_SUMMARY_LENGTH = 200
 MAX_TAGS = 5
 SEARCH_RESULTS_LIMIT = 10
+
+# Authentication settings
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS", "7"))
+SESSION_COOKIE_NAME = "session_token"

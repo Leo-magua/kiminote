@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - {{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="auth-logo">📝</div>
+                <h1>{{ app_name }}</h1>
+                <p>登录您的账户</p>
+            </div>
+            
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required placeholder="请输入用户名" autofocus>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required placeholder="请输入密码">
+                </div>
+                
+                <div class="form-group remember-me">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="remember" name="remember">
+                        <span>记住我（30天）</span>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-primary btn-full" id="loginBtn">
+                    登录
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>还没有账户？<a href="/register">立即注册</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+    
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Login form handling
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Validation
+            if (!username || !password) {
+                showToast('请填写用户名和密码', 'error');
+                return;
+            }
+            
+            // Show loading
+            loginBtn.innerHTML = '<span class="spinner"></span> 登录中...';
+            loginBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, remember })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast('登录成功！');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 500);
+                } else {
+                    const error = await response.text();
+                    showToast('登录失败：' + (error.includes('{') ? JSON.parse(error).detail : error), 'error');
+                }
+            } catch (error) {
+                showToast('登录失败：' + error.message, 'error');
+            } finally {
+                loginBtn.innerHTML = '登录';
+                loginBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

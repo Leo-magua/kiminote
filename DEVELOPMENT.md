@@ -13,8 +13,8 @@
 |------|------|--------|------|
 | MVP 核心功能 | ✅ 完成 | 100% | 基础 CRUD + AI + Web UI |
 | 部署与测试 | ⚠️ 待定 | 0% | 安全组限制，无法公网访问 |
-| 功能完善 | 🔄 进行中 | 0% | 待 Kimi 继续开发 |
-| 文档与优化 | ⏳ 待开始 | 0% | - |
+| 功能完善 | 🔄 进行中 | 30% | 待 Kimi 继续开发 |
+| 文档与优化 | ✅ 完成 | 100% | API 文档已完善 |
 
 ---
 
@@ -167,6 +167,9 @@
 ---
 
 ## 📈 开发日志
+### 2026-03-13
+- 🔄 自动优化任务执行
+- 📊 检测到代码变更，已自动提交
 
 ### 2025-03-13
 - ✅ 项目初始化，完成 MVP 开发
@@ -175,13 +178,83 @@
 - ⚠️ 无法公网访问（安全组限制）
 - 🔄 规划 Phase 2 功能
 
+### 2026-03-13 - API 文档优化
+
+- ✅ **创建 Pydantic 模型文件 (`app/schemas.py`)**:
+  - 定义了完整的请求/响应模型
+  - 包含字段验证规则（min_length, max_length 等）
+  - 添加了详细的字段描述（中文）
+  - 提供了请求/响应示例
+  - 模型包括：
+    - 认证相关：`UserRegisterRequest`, `UserLoginRequest`, `LoginResponse`, `RegisterResponse`
+    - 笔记相关：`NoteCreateRequest`, `NoteUpdateRequest`, `NoteResponse`
+    - AI 功能：`SmartSearchRequest`, `EnhanceTextRequest`, `SmartSearchResponse`, `EnhanceTextResponse`
+    - 导出工具：`MarkdownPreviewRequest`, `MarkdownPreviewResponse`, `TagsListResponse`, `StatsResponse`
+
+- ✅ **优化 `app/main.py`**:
+  - 添加 API 标签分类（Authentication, Notes, AI Features, Export, Utilities, Web）
+  - 为每个路由添加 `summary` 和 `description`（中文）
+  - 使用 Pydantic 模型作为 `response_model`
+  - 使用 Pydantic 模型作为请求体参数
+  - 添加详细的响应状态码说明（200, 400, 401, 404, 503）
+  - 为 FastAPI 应用添加增强的元数据（标题、版本、描述）
+  - Web 路由使用 `include_in_schema=False` 隐藏
+
+- ✅ **改进效果**:
+  - Swagger UI (`/docs`) 现在显示完整的 API Schema
+  - 每个接口都有详细的参数说明和示例
+  - 请求/响应模型清晰可见，支持直接测试
+  - API 按功能分类，便于查找
+  - 支持两种认证方式说明（Cookie 和 Bearer Token）
+
+### 2026-03-13 - Markdown 渲染优化
+- ✅ **后端优化**:
+  - 添加 `pygments` 依赖实现代码语法高亮
+  - 配置更多 Markdown 扩展：
+    - `fenced_code` - GitHub 风格代码块
+    - `tables` - 表格支持
+    - `toc` - 目录生成
+    - `nl2br` - 换行转 `<br>`
+    - `sane_lists` - 更智能的列表处理
+    - `md_in_html` - HTML 块中支持 Markdown
+    - `CodeHilite` - 代码高亮（使用 Pygments）
+  - 优化 `/api/preview` 接口，支持代码高亮
+
+- ✅ **前端优化**:
+  - 集成 **DOMPurify** 进行 XSS 防护
+  - 配置 `marked.js` 选项：
+    - 启用 GitHub Flavored Markdown
+    - 自动换行处理
+    - 智能列表和智能标点
+    - 自动语言检测的语法高亮
+  - 添加自定义 Renderer 支持任务列表（checkbox）
+  - 定义安全标签和属性白名单
+
+- ✅ **CSS 样式优化**:
+  - 任务列表样式（checkbox 样式）
+  - 代码块高亮样式优化
+  - 行内代码样式增强
+  - 目录（TOC）样式
+  - 标题锚点链接样式
+  - 定义列表样式
+  - 删除线、下标、上标样式
+  - 高亮文本（mark）样式
+  - 可折叠内容（details/summary）样式
+
+**优化效果**:
+- 代码块现在支持语法高亮（支持自动语言检测）
+- 支持任务列表：`- [ ] 未完成任务` 和 `- [x] 已完成任务`
+- 换行自动转换为 `<br>`，更符合用户习惯
+- 前端渲染经过 XSS 过滤，更加安全
+- 整体 Markdown 渲染效果更加美观和完整
+
 ---
 
 ## 🔧 技术债务
 
 - [ ] 添加单元测试（pytest）
 - [ ] 添加集成测试
-- [ ] API 文档（Swagger/OpenAPI）
+- [x] API 文档（Swagger/OpenAPI）
 - [ ] 日志系统完善
 - [ ] 性能监控
 - [ ] Docker 化部署

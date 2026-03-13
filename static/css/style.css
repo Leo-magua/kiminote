@@ -77,6 +77,66 @@ body {
     color: #991b1b;
 }
 
+/* User Section */
+.user-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    margin-bottom: 4px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.user-avatar {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.btn-logout {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius);
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-logout:hover {
+    background: var(--border);
+}
+
 .search-box {
     display: flex;
     gap: 8px;
@@ -798,4 +858,188 @@ button {
     border: none;
     border-top: 1px solid var(--border);
     margin: 24px 0;
+}
+
+/* Task list styles */
+.markdown-preview ul,
+.markdown-body ul {
+    list-style-type: disc;
+}
+
+.markdown-preview ul ul,
+.markdown-body ul ul {
+    list-style-type: circle;
+}
+
+.markdown-preview ul ul ul,
+.markdown-body ul ul ul {
+    list-style-type: square;
+}
+
+.markdown-preview .task-list-item,
+.markdown-body .task-list-item {
+    list-style-type: none;
+    margin-left: -1.5em;
+}
+
+.markdown-preview .task-list-item input[type="checkbox"],
+.markdown-body .task-list-item input[type="checkbox"] {
+    margin-right: 0.5em;
+    vertical-align: middle;
+    cursor: default;
+}
+
+/* Code highlighting styles */
+.markdown-preview pre code.hljs,
+.markdown-body pre code.hljs {
+    display: block;
+    overflow-x: auto;
+    padding: 16px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: var(--radius);
+}
+
+/* Inline code */
+.markdown-preview code:not(pre code),
+.markdown-body code:not(pre code) {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9em;
+    color: var(--text-primary);
+}
+
+/* Table of Contents */
+.markdown-preview .toc,
+.markdown-body .toc {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.markdown-preview .toc ul,
+.markdown-body .toc ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.markdown-preview .toc > ul,
+.markdown-body .toc > ul {
+    padding-left: 0;
+    list-style: none;
+}
+
+.markdown-preview .toc a,
+.markdown-body .toc a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.markdown-preview .toc a:hover,
+.markdown-body .toc a:hover {
+    text-decoration: underline;
+}
+
+/* Anchor links for headers */
+.markdown-preview h1,
+.markdown-body h1,
+.markdown-preview h2,
+.markdown-body h2,
+.markdown-preview h3,
+.markdown-body h3,
+.markdown-preview h4,
+.markdown-body h4,
+.markdown-preview h5,
+.markdown-body h5,
+.markdown-preview h6,
+.markdown-body h6 {
+    position: relative;
+}
+
+.markdown-preview h1:hover .anchor,
+.markdown-body h1:hover .anchor,
+.markdown-preview h2:hover .anchor,
+.markdown-body h2:hover .anchor,
+.markdown-preview h3:hover .anchor,
+.markdown-body h3:hover .anchor {
+    opacity: 1;
+}
+
+.anchor {
+    position: absolute;
+    left: -24px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.anchor:hover {
+    color: var(--primary);
+}
+
+/* Definition list support */
+.markdown-preview dl,
+.markdown-body dl {
+    margin-bottom: 16px;
+}
+
+.markdown-preview dt,
+.markdown-body dt {
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.markdown-preview dd,
+.markdown-body dd {
+    margin-left: 24px;
+    margin-bottom: 8px;
+}
+
+/* Strikethrough */
+.markdown-preview del,
+.markdown-body del,
+.markdown-preview s,
+.markdown-body s {
+    color: var(--text-muted);
+}
+
+/* Subscript and Superscript */
+.markdown-preview sub,
+.markdown-body sub,
+.markdown-preview sup,
+.markdown-body sup {
+    font-size: 0.75em;
+}
+
+/* Highlight text (mark) */
+.markdown-preview mark,
+.markdown-body mark {
+    background: #fef3c7;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Details/Summary (collapsible content) */
+.markdown-preview details,
+.markdown-body details {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.markdown-preview summary,
+.markdown-body summary {
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.markdown-preview summary:hover,
+.markdown-body summary:hover {
+    color: var(--primary);
 }
