@@ -1176,11 +1176,12 @@ elements.statsModal.addEventListener('click', (e) => {
 
 let richTextEditor = null;
 let currentAttachments = [];
+let isEditorReady = false;
 
 // Initialize rich text editor
 function initRichTextEditor() {
     // Check if TipTap is available
-    if (typeof tiptap === 'undefined') {
+    if (typeof window.tiptap === 'undefined') {
         console.warn('TipTap not loaded, falling back to textarea');
         return;
     }
@@ -1191,6 +1192,10 @@ function initRichTextEditor() {
         onChange: (html) => {
             // Sync with markdown tab if needed
             syncMarkdownFromHTML(html);
+            // Track changes for collaboration
+            if (typeof trackChanges === 'function') {
+                trackChanges();
+            }
         },
         onImageUpload: async (file) => {
             return await uploadImageFile(file);
@@ -1199,6 +1204,9 @@ function initRichTextEditor() {
             return await uploadAttachmentFile(file);
         }
     });
+    
+    isEditorReady = true;
+    console.log('Rich text editor initialized successfully');
 }
 
 // Upload image file
@@ -1357,7 +1365,18 @@ function syncHTMLFromMarkdown() {
 
 // Get editor content (for saving)
 function getEditorContent() {
-    if (richTextEditor && richTextEditor.isReady()) {
+    // Get active tab
+    const activeTab = document.querySelector('.tab-btn.active');
+    const tabName = activeTab ? activeTab.dataset.tab : 'edit';
+    
+    // If markdown tab is active, get content from textarea
+    if (tabName === 'markdown') {
+        const mdTextarea = document.getElementById('markdownContent');
+        return mdTextarea ? mdTextarea.value : '';
+    }
+    
+    // Otherwise get from rich text editor
+    if (richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
         // Convert HTML to Markdown for storage
         const html = richTextEditor.getHTML();
         if (typeof TurndownService !== 'undefined') {
@@ -1374,6 +1393,13 @@ function getEditorContent() {
                     return (node.checked ? '[x]' : '[ ]') + ' ';
                 }
             });
+            // Add rule for tables
+            turndown.addRule('table', {
+                filter: 'table',
+                replacement: function(content) {
+                    return '\n\n' + content + '\n\n';
+                }
+            });
             return turndown.turndown(html);
         }
         return html;
@@ -1383,7 +1409,8 @@ function getEditorContent() {
 
 // Set editor content (when loading note)
 function setEditorContent(markdown) {
-    if (richTextEditor && richTextEditor.isReady()) {
+    // Update rich text editor
+    if (richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
         // Convert Markdown to HTML
         if (typeof marked !== 'undefined') {
             const html = marked.parse(markdown);
@@ -1531,19 +1558,36 @@ updatePreview = function() {
     });
 };
 
-// Tab switching for editor tabs
-const originalTabBtns = elements.tabBtns;
-if (originalTabBtns) {
-    originalTabBtns.forEach(btn => {
+// Tab switching for editor tabs - Sync content between modes
+function setupTabSync() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
+            const prevTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+            
+            // Update active states
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Show/hide tab content
+            document.getElementById('editTab').classList.toggle('active', tab === 'edit');
+            document.getElementById('previewTab').classList.toggle('active', tab === 'preview');
+            document.getElementById('markdownTab').classList.toggle('active', tab === 'markdown');
             
             // Sync content between tabs
-            if (tab === 'markdown') {
-                syncMarkdownFromHTML(richTextEditor.getHTML());
-            } else if (tab === 'edit' && richTextEditor) {
+            if (tab === 'preview') {
+                updatePreview();
+            } else if (tab === 'markdown' && prevTab === 'edit') {
+                // Switching from edit to markdown - sync HTML to markdown
+                if (richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
+                    const html = richTextEditor.getHTML();
+                    syncMarkdownFromHTML(html);
+                }
+            } else if (tab === 'edit' && prevTab === 'markdown') {
+                // Switching from markdown to edit - sync markdown to HTML
                 const mdTextarea = document.getElementById('markdownContent');
-                if (mdTextarea) {
+                if (mdTextarea && richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
                     const html = marked.parse(mdTextarea.value);
                     richTextEditor.setHTML(html);
                 }
@@ -1572,11 +1616,15 @@ function waitForTipTap(callback, maxAttempts = 50) {
 // Initialize editor after page load
 document.addEventListener('DOMContentLoaded', () => {
     waitForTipTap(initRichTextEditor);
+    setupTabSync();
+    setupCollaborationListeners();
 });
 
 // Also try to initialize immediately in case DOM is already loaded
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     waitForTipTap(initRichTextEditor);
+    setupTabSync();
+    setupCollaborationListeners();
 }
 
 // ========== Collaboration Integration ==========
@@ -1833,15 +1881,7 @@ window.addEventListener('click', (e) => {
     }
 });
 
-// Initialize collaboration features
-document.addEventListener('DOMContentLoaded', () => {
-    setupCollaborationListeners();
-});
-
-// Also setup immediately if DOM is ready
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setupCollaborationListeners();
-}
+// Note: Collaboration listeners are now set up in the main DOMContentLoaded handler
 
 // Export functions for global access
 window.openCollaborationModal = openCollaborationModal;

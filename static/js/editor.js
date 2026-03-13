@@ -477,7 +477,15 @@ class RichTextEditor {
 
     // Content getters/setters
     getHTML() {
-        return this.editor ? this.editor.getHTML() : '';
+        if (this.editor && typeof this.editor.getHTML === 'function') {
+            try {
+                return this.editor.getHTML();
+            } catch (e) {
+                console.error('Error getting HTML from editor:', e);
+                return '';
+            }
+        }
+        return '';
     }
 
     getMarkdown() {
@@ -503,8 +511,12 @@ class RichTextEditor {
     }
 
     setHTML(html) {
-        if (this.editor) {
-            this.editor.commands.setContent(html);
+        if (this.editor && typeof this.editor.commands?.setContent === 'function') {
+            try {
+                this.editor.commands.setContent(html);
+            } catch (e) {
+                console.error('Error setting HTML to editor:', e);
+            }
         }
     }
 
@@ -519,17 +531,29 @@ class RichTextEditor {
     }
 
     focus() {
-        this.editor?.commands.focus();
+        if (this.editor && typeof this.editor.commands?.focus === 'function') {
+            try {
+                this.editor.commands.focus();
+            } catch (e) {
+                console.error('Error focusing editor:', e);
+            }
+        }
     }
 
     destroy() {
-        this.editor?.destroy();
+        if (this.editor && typeof this.editor.destroy === 'function') {
+            try {
+                this.editor.destroy();
+            } catch (e) {
+                console.error('Error destroying editor:', e);
+            }
+        }
         this.editor = null;
     }
 
     // Check if editor is ready
     isReady() {
-        return !!this.editor;
+        return this.editor !== null && typeof this.editor.getHTML === 'function';
     }
 
     // Get attachments
