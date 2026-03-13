@@ -1552,14 +1552,31 @@ if (originalTabBtns) {
     });
 }
 
+// Initialize editor after TipTap is loaded
+function waitForTipTap(callback, maxAttempts = 50) {
+    let attempts = 0;
+    const check = () => {
+        attempts++;
+        if (typeof window.tiptap !== 'undefined' && 
+            typeof window.tiptapStarterKit !== 'undefined') {
+            callback();
+        } else if (attempts < maxAttempts) {
+            setTimeout(check, 100);
+        } else {
+            console.warn('TipTap failed to load, using fallback textarea');
+        }
+    };
+    check();
+}
+
 // Initialize editor after page load
 document.addEventListener('DOMContentLoaded', () => {
-    initRichTextEditor();
+    waitForTipTap(initRichTextEditor);
 });
 
 // Also try to initialize immediately in case DOM is already loaded
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initRichTextEditor();
+    waitForTipTap(initRichTextEditor);
 }
 
 // ========== Collaboration Integration ==========
