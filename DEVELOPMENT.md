@@ -781,3 +781,28 @@
 
 **项目状态**: ✅ 协作功能 100% 完成
 
+
+---
+
+### 2026-03-14 - 富文本编辑器功能验证完成
+- ✅ **富文本编辑器功能已完整实现并验证**
+  - 数据模型: `Attachment` 模型支持图片和附件存储
+  - 上传 API: 
+    - `POST /api/upload/image` - 图片上传 (JPG/PNG/GIF/WebP/SVG, 最大 10MB)
+    - `POST /api/upload/attachment` - 附件上传 (PDF/Word/Excel/PPT/TXT 等, 最大 50MB)
+  - 附件管理 API:
+    - `GET /api/notes/{id}/attachments` - 获取笔记附件列表
+    - `DELETE /api/attachments/{id}` - 删除附件
+  - 前端实现:
+    - TipTap.js v2.2+ 富文本编辑器集成
+    - 三种编辑模式: 富文本编辑、实时预览、Markdown 源码
+    - 图片上传: 支持点击上传和拖拽上传
+    - 附件管理: 支持多文件上传、附件列表显示、删除功能
+    - 撤销/重做: 工具栏按钮 + 快捷键 (Ctrl+Z / Ctrl+Y)
+    - 表格编辑: 插入表格、调整行列
+    - 任务列表: 可勾选的任务项，支持嵌套
+    - 代码高亮: 行内代码和代码块，集成 highlight.js
+    - Markdown 双向转换: Turndown.js (HTML→Markdown) + Marked.js (Markdown→HTML)
+  - 静态文件服务: `/uploads` 目录已挂载
+
+**状态**: ✅ 富文本编辑器功能 100% 完成
