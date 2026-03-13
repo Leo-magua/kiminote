@@ -72,6 +72,7 @@ let allTags = [];
 let currentTagFilter = null;
 let isAiAvailable = false;
 let currentShares = [];
+let collaboratedNotes = [];  // Notes user collaborates on
 
 // DOM Elements
 const elements = {
@@ -151,7 +152,16 @@ const elements = {
     
     // Stats Modal
     statsModal: document.getElementById('statsModal'),
-    statsBtn: document.getElementById('statsBtn')
+    statsBtn: document.getElementById('statsBtn'),
+    
+    // Collaboration
+    collaborationBtn: document.getElementById('collaborationBtn'),
+    versionsBtn: document.getElementById('versionsBtn'),
+    collaborationModal: document.getElementById('collaborationModal'),
+    versionsModal: document.getElementById('versionsModal'),
+    collaboratorUsername: document.getElementById('collaboratorUsername'),
+    collaboratorPermission: document.getElementById('collaboratorPermission'),
+    addCollaboratorBtn: document.getElementById('addCollaboratorBtn')
 };
 
 // API Helper
@@ -362,6 +372,78 @@ function filterNotes() {
     renderNotes(filtered);
 }
 
+// ========== Collaboration Functions ==========
+
+// Open collaboration modal
+function openCollaborationModal() {
+    if (!currentNote) {
+        showToast('请先保存笔记', 'error');
+        return;
+    }
+    
+    // Load collaborators
+    loadCollaborators();
+    
+    // Connect to collaboration WebSocket
+    if (window.collaborationManager) {
+        window.collaborationManager.connect(currentNote.id);
+    }
+    
+    toggleModal(elements.collaborationModal, true);
+}
+
+// Load collaborators for current note
+async function loadCollaborators() {
+    if (!currentNote) return;
+    
+    try {
+        const result = await api.get(`/api/notes/${currentNote.id}/collaborators`);
+        window.collaboratorsManager.collaborators = result.collaborators;
+        window.collaboratorsManager.currentNoteId = currentNote.id;
+        window.collaboratorsManager.renderCollaboratorsList();
+    } catch (error) {
+        console.error('Failed to load collaborators:', error);
+        showToast('加载协作者失败', 'error');
+    }
+}
+
+// Add collaborator
+async function addCollaborator() {
+    const username = elements.collaboratorUsername.value.trim();
+    const permission = elements.collaboratorPermission.value;
+    
+    if (!username) {
+        showToast('请输入用户名', 'error');
+        return;
+    }
+    
+    try {
+        await window.collaboratorsManager.addCollaborator(username, permission);
+        elements.collaboratorUsername.value = '';
+        await loadCollaborators();
+    } catch (error) {
+        console.error('Error adding collaborator:', error);
+    }
+}
+
+// Open versions modal
+async function openVersionsModal() {
+    if (!currentNote) {
+        showToast('请先保存笔记', 'error');
+        return;
+    }
+    
+    toggleModal(elements.versionsModal, true);
+    
+    try {
+        await window.versionHistoryManager.loadVersions(currentNote.id);
+        window.versionHistoryManager.renderVersionsList();
+    } catch (error) {
+        console.error('Failed to load versions:', error);
+        showToast('加载版本历史失败', 'error');
+    }
+}
+
 // Open note for editing
 async function openNote(id) {
     try {
@@ -497,6 +579,62 @@ async function loadTags() {
     } catch (error) {
         console.error('Failed to load tags:', error);
     }
+}
+
+// Load collaborated notes
+async function loadCollaboratedNotes() {
+    try {
+        const result = await api.get('/api/collaborated-notes');
+        collaboratedNotes = result;
+        renderCollaboratedNotes();
+    } catch (error) {
+        console.error('Failed to load collaborated notes:', error);
+    }
+}
+
+// Render collaborated notes in sidebar
+function renderCollaboratedNotes() {
+    // Check if section exists, if not create it
+    let section = document.getElementById('collaboratedSection');
+    if (!section) {
+        section = document.createElement('div');
+        section.id = 'collaboratedSection';
+        section.className = 'collaborated-section';
+        
+        // Insert before stats section
+        const statsSection = document.querySelector('.stats-section-sidebar');
+        if (statsSection) {
+            statsSection.parentNode.insertBefore(section, statsSection);
+        } else {
+            document.querySelector('.sidebar').appendChild(section);
+        }
+    }
+    
+    if (collaboratedNotes.length === 0) {
+        section.innerHTML = '';
+        section.style.display = 'none';
+        return;
+    }
+    
+    section.style.display = 'block';
+    section.innerHTML = `
+        <h3>👥 协作笔记 <span class="collaborated-count">(${collaboratedNotes.length})</span></h3>
+        <div class="collaborated-list">
+            ${collaboratedNotes.map(note => `
+                <div class="collaborated-item" data-id="${note.id}">
+                    <span class="collaborated-title">${escapeHtml(note.title)}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    // Add click handlers
+    section.querySelectorAll('.collaborated-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const id = parseInt(item.dataset.id);
+            openNote(id);
+        });
+    });
 }
 
 // Check AI availability
@@ -792,6 +930,7 @@ async function init() {
     await checkAiStatus();
     await loadNotes();
     await loadTags();
+    await loadCollaboratedNotes();
 }
 
 init();
@@ -1168,6 +1307,36 @@ elements.statsBtn.addEventListener('click', openStatsModal);
 elements.statsModal.addEventListener('click', (e) => {
     if (e.target === elements.statsModal) {
         toggleModal(elements.statsModal, false);
+    }
+});
+
+// ========== Collaboration Event Listeners ==========
+
+// Collaboration modal
+if (elements.collaborationBtn) {
+    elements.collaborationBtn.addEventListener('click', openCollaborationModal);
+}
+
+// Versions modal
+if (elements.versionsBtn) {
+    elements.versionsBtn.addEventListener('click', openVersionsModal);
+}
+
+// Add collaborator
+if (elements.addCollaboratorBtn) {
+    elements.addCollaboratorBtn.addEventListener('click', addCollaborator);
+}
+
+// Close collaboration modals when clicking outside
+window.addEventListener('click', (e) => {
+    if (e.target === elements.collaborationModal) {
+        toggleModal(elements.collaborationModal, false);
+        if (window.collaborationManager) {
+            window.collaborationManager.disconnect();
+        }
+    }
+    if (e.target === elements.versionsModal) {
+        toggleModal(elements.versionsModal, false);
     }
 });
 

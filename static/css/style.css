@@ -1983,3 +1983,30 @@ button {
     color: var(--text-muted);
     margin-left: 8px;
 }
+
+.collaborated-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.collaborated-item {
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.collaborated-item:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.collaborated-title {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

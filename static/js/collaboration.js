@@ -31,14 +31,22 @@ class CollaborationManager {
 
         this.noteId = noteId;
         
-        // Get auth token from cookie
-        const token = this.getCookie('session_token');
+        // Get auth token from cookie - try both cookie names
+        let token = this.getCookie('session_token') || this.getCookie('access_token');
+        
+        // If no cookie, try to get from localStorage or sessionStorage
         if (!token) {
-            console.error('No auth token found');
+            token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+        }
+        
+        if (!token) {
+            console.error('No auth token found for WebSocket connection');
+            this.showCollaborationStatus('未认证', 'error');
             return;
         }
 
-        const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/collaborate/${noteId}?token=${token}`;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/collaborate/${noteId}?token=${encodeURIComponent(token)}`;
         
         try {
             this.ws = new WebSocket(wsUrl);
