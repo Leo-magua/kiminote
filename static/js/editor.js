@@ -1,6 +1,7 @@
 /**
  * TipTap Rich Text Editor Integration for AI Notes
  * Supports: formatting, images, attachments, undo/redo, tables, task lists
+ * Version: 2.0
  */
 
 class RichTextEditor {
@@ -11,6 +12,11 @@ class RichTextEditor {
         this.onAttachmentUpload = options.onAttachmentUpload || null;
         this.editor = null;
         this.attachments = [];
+        this.historyStack = [];
+        this.historyIndex = -1;
+        this.maxHistorySize = 100;
+        this.isInitialized = false;
+        
         this.init();
     }
 
@@ -27,6 +33,10 @@ class RichTextEditor {
             return;
         }
 
+        this.setupExtensions();
+    }
+
+    setupExtensions() {
         const { Editor } = window.tiptap;
         const { StarterKit } = window.tiptapStarterKit;
         const { Image } = window.tiptapImage;
@@ -60,7 +70,11 @@ class RichTextEditor {
                         italic: {},
                         strike: {},
                         dropcursor: false,
-                        gapcursor: false
+                        gapcursor: false,
+                        history: {
+                            depth: 100,
+                            newGroupDelay: 500
+                        }
                     }),
                     Placeholder.configure({
                         placeholder: '开始编写笔记内容...'
@@ -98,19 +112,25 @@ class RichTextEditor {
                 ],
                 content: '',
                 onUpdate: ({ editor }) => {
-                    this.onChange(editor.getHTML());
+                    const html = editor.getHTML();
+                    this.onChange(html);
                     this.updateToolbarState();
+                    this.saveToHistory(html);
                 },
                 onSelectionUpdate: () => {
                     this.updateToolbarState();
+                },
+                onCreate: () => {
+                    this.isInitialized = true;
+                    console.log('TipTap editor initialized successfully');
                 }
             });
 
             this.setupToolbarHandlers();
             this.setupKeyboardShortcuts();
             this.setupDragAndDrop();
+            this.setupContextMenu();
             
-            console.log('TipTap editor initialized successfully');
         } catch (error) {
             console.error('Failed to initialize TipTap editor:', error);
         }
@@ -121,6 +141,7 @@ class RichTextEditor {
         document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 const command = btn.dataset.command;
                 this.executeCommand(command, btn);
             });
@@ -152,13 +173,7 @@ class RichTextEditor {
                 editor.commands.toggleHighlight();
                 break;
             case 'heading':
-                const level = editor.isActive('heading', { level: 1 }) ? 0 :
-                              editor.isActive('heading', { level: 2 }) ? 0 : 1;
-                if (level === 1) {
-                    editor.commands.toggleHeading({ level: 1 });
-                } else {
-                    editor.commands.setParagraph();
-                }
+                this.toggleHeading();
                 break;
             case 'bulletList':
                 editor.commands.toggleBulletList();
@@ -188,7 +203,7 @@ class RichTextEditor {
                 this.promptImage();
                 break;
             case 'table':
-                this.insertTable();
+                this.showTableModal();
                 break;
             case 'attachment':
                 this.promptAttachment();
@@ -198,6 +213,22 @@ class RichTextEditor {
         }
 
         this.updateToolbarState();
+    }
+
+    toggleHeading() {
+        if (!this.editor) return;
+        
+        const editor = this.editor;
+        const isH1 = editor.isActive('heading', { level: 1 });
+        const isH2 = editor.isActive('heading', { level: 2 });
+        
+        if (isH1) {
+            editor.commands.toggleHeading({ level: 2 });
+        } else if (isH2) {
+            editor.commands.setParagraph();
+        } else {
+            editor.commands.toggleHeading({ level: 1 });
+        }
     }
 
     updateToolbarState() {
@@ -273,24 +304,42 @@ class RichTextEditor {
         }
     }
 
+    showTableModal() {
+        // Show table insert modal
+        const modal = document.getElementById('tableInsertModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else {
+            // Fallback: insert default table
+            this.insertTable(3, 3, true);
+        }
+    }
+
     // Image handling
     promptImage() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                await this.insertImage(file);
-            }
-        };
-        input.click();
+        const modal = document.getElementById('imageUploadModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else {
+            // Fallback: direct file select
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    await this.insertImage(file);
+                }
+            };
+            input.click();
+        }
     }
 
     async insertImage(file) {
         if (!this.editor) return;
 
         // Show uploading indicator
+        const loadingPos = this.editor.state.selection.head;
         this.editor.chain().focus().insertContent({
             type: 'paragraph',
             content: [{ type: 'text', text: '⏳ 正在上传图片...' }]
@@ -302,7 +351,11 @@ class RichTextEditor {
                 // Replace loading text with image
                 this.editor.commands.undo();
                 this.editor.chain().focus().setImage({ src: imageUrl, alt: file.name }).run();
-                showToast('图片上传成功');
+                
+                // Show success notification if showToast is available
+                if (typeof showToast === 'function') {
+                    showToast('图片上传成功');
+                }
             } else {
                 // Fallback to base64
                 const reader = new FileReader();
@@ -317,45 +370,81 @@ class RichTextEditor {
             }
         } catch (error) {
             this.editor.commands.undo();
-            showToast('图片上传失败: ' + error.message, 'error');
+            if (typeof showToast === 'function') {
+                showToast('图片上传失败: ' + error.message, 'error');
+            }
         }
     }
 
     // Table handling
-    insertTable() {
+    insertTable(rows = 3, cols = 3, withHeaderRow = true) {
         if (!this.editor) return;
-        this.editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        this.editor.chain().focus().insertTable({ rows, cols, withHeaderRow }).run();
     }
 
     // Attachment handling
     promptAttachment() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.multiple = true;
-        input.onchange = async (e) => {
-            const files = Array.from(e.target.files);
-            for (const file of files) {
-                await this.uploadAttachment(file);
-            }
-        };
-        input.click();
+        const modal = document.getElementById('attachmentUploadModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else {
+            // Fallback: direct file select
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.onchange = async (e) => {
+                const files = Array.from(e.target.files);
+                for (const file of files) {
+                    await this.uploadAttachment(file);
+                }
+            };
+            input.click();
+        }
     }
 
     async uploadAttachment(file) {
         if (!this.onAttachmentUpload) {
-            showToast('附件上传功能未配置', 'error');
+            if (typeof showToast === 'function') {
+                showToast('附件上传功能未配置', 'error');
+            }
             return;
         }
 
         try {
-            showToast(`正在上传 ${file.name}...`);
+            if (typeof showToast === 'function') {
+                showToast(`正在上传 ${file.name}...`);
+            }
             const attachment = await this.onAttachmentUpload(file);
             this.attachments.push(attachment);
-            this.renderAttachments();
-            showToast('附件上传成功');
+            this.insertAttachmentLink(attachment);
+            if (typeof showToast === 'function') {
+                showToast('附件上传成功');
+            }
         } catch (error) {
-            showToast('附件上传失败: ' + error.message, 'error');
+            if (typeof showToast === 'function') {
+                showToast('附件上传失败: ' + error.message, 'error');
+            }
         }
+    }
+
+    insertAttachmentLink(attachment) {
+        if (!this.editor) return;
+        
+        this.editor.chain().focus().insertContent({
+            type: 'paragraph',
+            content: [{
+                type: 'text',
+                text: `📎 ${attachment.original_filename || attachment.filename}`,
+                marks: [{
+                    type: 'link',
+                    attrs: { 
+                        href: attachment.url,
+                        'data-attachment': 'true',
+                        'data-attachment-id': attachment.id
+                    }
+                }]
+            }]
+        }).run();
     }
 
     renderAttachments() {
@@ -375,9 +464,9 @@ class RichTextEditor {
                 <div class="attachment-items">
                     ${this.attachments.map(att => `
                         <div class="attachment-item" data-id="${att.id}">
-                            <span class="attachment-icon">${this.getFileIcon(att.filename)}</span>
-                            <span class="attachment-name">${this.escapeHtml(att.filename)}</span>
-                            <span class="attachment-size">${this.formatFileSize(att.size)}</span>
+                            <span class="attachment-icon">${this.getFileIcon(att.filename || att.original_filename)}</span>
+                            <span class="attachment-name">${this.escapeHtml(att.original_filename || att.filename)}</span>
+                            <span class="attachment-size">${this.formatFileSize(att.file_size || att.size)}</span>
                             <button class="attachment-remove" data-id="${att.id}" title="删除">×</button>
                         </div>
                     `).join('')}
@@ -396,7 +485,7 @@ class RichTextEditor {
     }
 
     getFileIcon(filename) {
-        const ext = filename.split('.').pop().toLowerCase();
+        const ext = (filename || '').split('.').pop().toLowerCase();
         const icons = {
             'pdf': '📄',
             'doc': '📝', 'docx': '📝',
@@ -413,7 +502,7 @@ class RichTextEditor {
     }
 
     formatFileSize(bytes) {
-        if (bytes === 0) return '0 B';
+        if (!bytes || bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -427,7 +516,7 @@ class RichTextEditor {
         return div.innerHTML;
     }
 
-    // Drag and drop for images
+    // Drag and drop for images and files
     setupDragAndDrop() {
         if (!this.element) return;
 
@@ -465,14 +554,66 @@ class RichTextEditor {
         });
     }
 
+    // Context menu for table operations
+    setupContextMenu() {
+        // Right-click on table cells
+        this.element?.addEventListener('contextmenu', (e) => {
+            const cell = e.target.closest('td, th');
+            if (cell && this.editor) {
+                // Could show custom context menu here
+                // For now, we rely on the toolbar buttons
+            }
+        });
+    }
+
     // Keyboard shortcuts
     setupKeyboardShortcuts() {
         if (!this.element) return;
 
         this.element.addEventListener('keydown', (e) => {
-            // Custom shortcuts are handled by TipTap's StarterKit
+            // Custom shortcuts are mostly handled by TipTap's StarterKit
             // But we can add custom ones here if needed
+            
+            // Ctrl/Cmd + K for link
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                this.promptLink();
+            }
         });
+    }
+
+    // History management for custom undo/redo (in addition to TipTap's built-in)
+    saveToHistory(content) {
+        // Remove any future history if we're not at the end
+        if (this.historyIndex < this.historyStack.length - 1) {
+            this.historyStack = this.historyStack.slice(0, this.historyIndex + 1);
+        }
+        
+        // Add new state
+        this.historyStack.push(content);
+        this.historyIndex++;
+        
+        // Limit history size
+        if (this.historyStack.length > this.maxHistorySize) {
+            this.historyStack.shift();
+            this.historyIndex--;
+        }
+    }
+
+    customUndo() {
+        if (this.historyIndex > 0) {
+            this.historyIndex--;
+            const content = this.historyStack[this.historyIndex];
+            this.setHTML(content);
+        }
+    }
+
+    customRedo() {
+        if (this.historyIndex < this.historyStack.length - 1) {
+            this.historyIndex++;
+            const content = this.historyStack[this.historyIndex];
+            this.setHTML(content);
+        }
     }
 
     // Content getters/setters
@@ -490,21 +631,32 @@ class RichTextEditor {
 
     getMarkdown() {
         if (!this.editor) return '';
+        
         // Convert HTML to Markdown using Turndown
         if (typeof TurndownService !== 'undefined') {
             const turndown = new TurndownService({
                 headingStyle: 'atx',
                 codeBlockStyle: 'fenced'
             });
+            
             // Add rule for task lists
             turndown.addRule('taskList', {
                 filter: function (node) {
-                    return node.type === 'checkbox' && node.parentNode.nodeName === 'LI';
+                    return node.type === 'checkbox' && node.parentNode?.nodeName === 'LI';
                 },
                 replacement: function (content, node) {
                     return (node.checked ? '[x]' : '[ ]') + ' ';
                 }
             });
+            
+            // Add rule for highlight
+            turndown.addRule('highlight', {
+                filter: 'mark',
+                replacement: function(content) {
+                    return '==' + content + '==';
+                }
+            });
+            
             return turndown.turndown(this.editor.getHTML());
         }
         return this.editor.getHTML();
@@ -514,6 +666,10 @@ class RichTextEditor {
         if (this.editor && typeof this.editor.commands?.setContent === 'function') {
             try {
                 this.editor.commands.setContent(html);
+                // Save initial state to history
+                if (this.historyStack.length === 0) {
+                    this.saveToHistory(html);
+                }
             } catch (e) {
                 console.error('Error setting HTML to editor:', e);
             }
@@ -549,11 +705,12 @@ class RichTextEditor {
             }
         }
         this.editor = null;
+        this.isInitialized = false;
     }
 
     // Check if editor is ready
     isReady() {
-        return this.editor !== null && typeof this.editor.getHTML === 'function';
+        return this.isInitialized && this.editor !== null && typeof this.editor.getHTML === 'function';
     }
 
     // Get attachments
@@ -566,7 +723,33 @@ class RichTextEditor {
         this.attachments = attachments || [];
         this.renderAttachments();
     }
+
+    // Insert content at cursor
+    insertContent(content) {
+        if (this.editor) {
+            this.editor.chain().focus().insertContent(content).run();
+        }
+    }
+
+    // Get selected text
+    getSelectedText() {
+        if (!this.editor) return '';
+        const { from, to } = this.editor.state.selection;
+        return this.editor.state.doc.textBetween(from, to);
+    }
+
+    // Replace selection with content
+    replaceSelection(content) {
+        if (this.editor) {
+            this.editor.chain().focus().insertContent(content).run();
+        }
+    }
 }
 
 // Global editor instance
 window.RichTextEditor = RichTextEditor;
+
+// Export for module systems (if needed)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { RichTextEditor };
+}

@@ -1,5 +1,6 @@
 /**
  * AI Notes - Frontend Application
+ * Integrated with TipTap Rich Text Editor
  */
 
 // Configure marked.js options
@@ -78,6 +79,10 @@ let collaboratedNotes = [];  // Notes user collaborates on
 let richTextEditor = null;
 let currentAttachments = [];
 let isEditorReady = false;
+let currentTab = 'edit'; // 'edit', 'preview', 'markdown'
+
+// Turndown instance for HTML to Markdown conversion
+let turndownService = null;
 
 // DOM Elements
 const elements = {
@@ -106,11 +111,12 @@ const elements = {
     saveBtn: document.getElementById('saveBtn'),
     deleteBtn: document.getElementById('deleteBtn'),
     noteTitle: document.getElementById('noteTitle'),
-    noteContent: document.getElementById('markdownContent'),  // Fallback textarea for markdown
+    markdownContent: document.getElementById('markdownContent'),  // Markdown textarea
     previewContent: document.getElementById('previewContent'),
     tabBtns: document.querySelectorAll('.tab-btn'),
     editTab: document.getElementById('editTab'),
     previewTab: document.getElementById('previewTab'),
+    markdownTab: document.getElementById('markdownTab'),
     noteTags: document.getElementById('noteTags'),
     noteSummary: document.getElementById('noteSummary'),
     noteDates: document.getElementById('noteDates'),
@@ -166,7 +172,17 @@ const elements = {
     versionsModal: document.getElementById('versionsModal'),
     collaboratorUsername: document.getElementById('collaboratorUsername'),
     collaboratorPermission: document.getElementById('collaboratorPermission'),
-    addCollaboratorBtn: document.getElementById('addCollaboratorBtn')
+    addCollaboratorBtn: document.getElementById('addCollaboratorBtn'),
+    
+    // Upload Modals
+    imageUploadModal: document.getElementById('imageUploadModal'),
+    attachmentUploadModal: document.getElementById('attachmentUploadModal'),
+    tableInsertModal: document.getElementById('tableInsertModal'),
+    linkInsertModal: document.getElementById('linkInsertModal'),
+    
+    // Markdown Import/Export buttons
+    mdImportBtn: document.getElementById('mdImportBtn'),
+    mdExportBtn: document.getElementById('mdExportBtn')
 };
 
 // API Helper
@@ -215,8 +231,64 @@ const api = {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(downloadUrl);
+    },
+    
+    async uploadFile(url, file, onProgress = null) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText);
+        }
+        
+        return response.json();
     }
 };
+
+// Initialize Turndown service for HTML to Markdown conversion
+function initTurndown() {
+    if (typeof TurndownService !== 'undefined' && !turndownService) {
+        turndownService = new TurndownService({
+            headingStyle: 'atx',
+            codeBlockStyle: 'fenced',
+            bulletListMarker: '-'
+        });
+        
+        // Configure task list handling
+        turndownService.addRule('taskListItem', {
+            filter: function(node) {
+                return node.type === 'checkbox' && 
+                       node.parentNode && 
+                       node.parentNode.nodeName === 'LI';
+            },
+            replacement: function(content, node) {
+                return (node.checked ? '[x]' : '[ ]') + ' ';
+            }
+        });
+        
+        // Handle strike through
+        turndownService.addRule('strikethrough', {
+            filter: ['del', 's', 'strike'],
+            replacement: function(content) {
+                return '~~' + content + '~~';
+            }
+        });
+        
+        // Handle highlight
+        turndownService.addRule('highlight', {
+            filter: 'mark',
+            replacement: function(content) {
+                return '==' + content + '==';
+            }
+        });
+    }
+}
 
 // Toast notification
 function showToast(message, type = 'success') {
@@ -286,7 +358,7 @@ function renderNotes(notes) {
     elements.notesList.innerHTML = notes.map(note => `
         <div class="note-card" data-id="${note.id}">
             <h3>${escapeHtml(note.title)}</h3>
-            <div class="note-summary">${escapeHtml(note.summary || note.content.substring(0, 150) + '...')}</div>
+            <div class="note-summary">${escapeHtml(note.summary || stripHtml(note.content).substring(0, 150) + '...')}</div>
             <div class="note-meta">
                 <div class="note-tags">
                     ${note.tags.map(tag => `<span class="note-tag">${escapeHtml(tag)}</span>`).join('')}
@@ -303,6 +375,14 @@ function renderNotes(notes) {
             openNote(id);
         });
     });
+}
+
+// Strip HTML tags
+function stripHtml(html) {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
 }
 
 // Escape HTML
@@ -377,6 +457,138 @@ function filterNotes() {
     renderNotes(filtered);
 }
 
+// ========== Editor Functions ==========
+
+// Initialize Rich Text Editor
+function initRichTextEditor() {
+    if (richTextEditor) {
+        richTextEditor.destroy();
+    }
+    
+    // Initialize Turndown first
+    initTurndown();
+    
+    richTextEditor = new RichTextEditor({
+        element: document.getElementById('editor'),
+        onChange: (html) => {
+            // Sync HTML to Markdown textarea when editor content changes
+            if (currentTab === 'edit' && turndownService) {
+                const markdown = turndownService.turndown(html);
+                elements.markdownContent.value = markdown;
+            }
+        },
+        onImageUpload: async (file) => {
+            return await uploadImage(file);
+        },
+        onAttachmentUpload: async (file) => {
+            return await uploadAttachment(file);
+        }
+    });
+    
+    isEditorReady = true;
+}
+
+// Upload image
+async function uploadImage(file) {
+    try {
+        const result = await api.uploadFile('/api/upload/image', file);
+        return result.url;
+    } catch (error) {
+        console.error('Image upload error:', error);
+        throw new Error('图片上传失败: ' + error.message);
+    }
+}
+
+// Upload attachment
+async function uploadAttachment(file) {
+    try {
+        const result = await api.uploadFile('/api/upload/attachment', file);
+        currentAttachments.push(result);
+        return result;
+    } catch (error) {
+        console.error('Attachment upload error:', error);
+        throw new Error('附件上传失败: ' + error.message);
+    }
+}
+
+// Get current content (Markdown)
+function getCurrentContent() {
+    if (currentTab === 'markdown') {
+        // If in markdown tab, return textarea content
+        return elements.markdownContent.value;
+    } else {
+        // Otherwise, convert editor HTML to markdown
+        if (richTextEditor && turndownService) {
+            const html = richTextEditor.getHTML();
+            return turndownService.turndown(html);
+        }
+        return elements.markdownContent.value;
+    }
+}
+
+// Set content to editor
+function setEditorContent(markdown) {
+    elements.markdownContent.value = markdown;
+    
+    if (richTextEditor) {
+        // Convert markdown to HTML using marked, then set to editor
+        const html = marked.parse(markdown);
+        richTextEditor.setHTML(html);
+    }
+}
+
+// Switch tab
+function switchTab(tabName) {
+    currentTab = tabName;
+    
+    // Update tab buttons
+    elements.tabBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    
+    // Update tab content visibility
+    elements.editTab.classList.toggle('active', tabName === 'edit');
+    elements.previewTab.classList.toggle('active', tabName === 'preview');
+    elements.markdownTab.classList.toggle('active', tabName === 'markdown');
+    
+    // Handle content sync between tabs
+    if (tabName === 'preview') {
+        updatePreview();
+    } else if (tabName === 'markdown') {
+        // Sync from editor to textarea
+        if (richTextEditor && turndownService) {
+            const html = richTextEditor.getHTML();
+            elements.markdownContent.value = turndownService.turndown(html);
+        }
+    } else if (tabName === 'edit') {
+        // Sync from textarea to editor
+        if (richTextEditor && elements.markdownContent.value) {
+            const html = marked.parse(elements.markdownContent.value);
+            richTextEditor.setHTML(html);
+        }
+    }
+}
+
+// Update markdown preview
+function updatePreview() {
+    const content = getCurrentContent();
+    
+    // Parse markdown
+    let html = marked.parse(content);
+    
+    // Sanitize HTML to prevent XSS attacks
+    if (typeof DOMPurify !== 'undefined') {
+        html = DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
+    }
+    
+    elements.previewContent.innerHTML = html;
+    
+    // Apply syntax highlighting
+    elements.previewContent.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+    });
+}
+
 // ========== Collaboration Functions ==========
 
 // Open collaboration modal
@@ -403,9 +615,11 @@ async function loadCollaborators() {
     
     try {
         const result = await api.get(`/api/notes/${currentNote.id}/collaborators`);
-        window.collaboratorsManager.collaborators = result.collaborators;
-        window.collaboratorsManager.currentNoteId = currentNote.id;
-        window.collaboratorsManager.renderCollaboratorsList();
+        if (window.collaboratorsManager) {
+            window.collaboratorsManager.collaborators = result.collaborators;
+            window.collaboratorsManager.currentNoteId = currentNote.id;
+            window.collaboratorsManager.renderCollaboratorsList();
+        }
     } catch (error) {
         console.error('Failed to load collaborators:', error);
         showToast('加载协作者失败', 'error');
@@ -423,9 +637,11 @@ async function addCollaborator() {
     }
     
     try {
-        await window.collaboratorsManager.addCollaborator(username, permission);
-        elements.collaboratorUsername.value = '';
-        await loadCollaborators();
+        if (window.collaboratorsManager) {
+            await window.collaboratorsManager.addCollaborator(username, permission);
+            elements.collaboratorUsername.value = '';
+            await loadCollaborators();
+        }
     } catch (error) {
         console.error('Error adding collaborator:', error);
     }
@@ -441,8 +657,10 @@ async function openVersionsModal() {
     toggleModal(elements.versionsModal, true);
     
     try {
-        await window.versionHistoryManager.loadVersions(currentNote.id);
-        window.versionHistoryManager.renderVersionsList();
+        if (window.versionHistoryManager) {
+            await window.versionHistoryManager.loadVersions(currentNote.id);
+            window.versionHistoryManager.renderVersionsList();
+        }
     } catch (error) {
         console.error('Failed to load versions:', error);
         showToast('加载版本历史失败', 'error');
@@ -455,7 +673,9 @@ async function openNote(id) {
         currentNote = await api.get(`/api/notes/${id}`);
         
         elements.noteTitle.value = currentNote.title;
-        elements.noteContent.value = currentNote.content;
+        
+        // Set content to editor
+        setEditorContent(currentNote.content);
         
         renderNoteMeta();
         
@@ -466,8 +686,10 @@ async function openNote(id) {
         // Show share button
         elements.shareBtn.style.display = 'inline-block';
         
+        // Reset to edit tab
+        switchTab('edit');
+        
         showView('edit');
-        updatePreview();
     } catch (error) {
         showToast('加载笔记失败: ' + error.message, 'error');
     }
@@ -500,7 +722,13 @@ function renderNoteMeta() {
 async function createNewNote() {
     currentNote = null;
     elements.noteTitle.value = '';
-    elements.noteContent.value = '';
+    elements.markdownContent.value = '';
+    
+    // Clear editor
+    if (richTextEditor) {
+        richTextEditor.setHTML('');
+    }
+    
     elements.noteTags.innerHTML = '';
     elements.noteSummary.innerHTML = '';
     elements.noteDates.innerHTML = '';
@@ -510,6 +738,9 @@ async function createNewNote() {
     // Hide share button for new notes
     elements.shareBtn.style.display = 'none';
     
+    // Reset to edit tab
+    switchTab('edit');
+    
     showView('edit');
     elements.noteTitle.focus();
 }
@@ -517,7 +748,7 @@ async function createNewNote() {
 // Save note
 async function saveNote() {
     const title = elements.noteTitle.value.trim();
-    const content = elements.noteContent.value.trim();
+    const content = getCurrentContent().trim();
     
     if (!title) {
         showToast('请输入标题', 'error');
@@ -535,6 +766,9 @@ async function saveNote() {
             const result = await api.post('/api/notes', { title, content });
             currentNote = result;
             showToast('笔记已创建');
+            
+            // Show share button after creation
+            elements.shareBtn.style.display = 'inline-block';
         }
         
         // Reload notes
@@ -653,26 +887,6 @@ async function checkAiStatus() {
     }
 }
 
-// Update markdown preview
-function updatePreview() {
-    const content = elements.noteContent.value;
-    
-    // Parse markdown
-    let html = marked.parse(content);
-    
-    // Sanitize HTML to prevent XSS attacks
-    if (typeof DOMPurify !== 'undefined') {
-        html = DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
-    }
-    
-    elements.previewContent.innerHTML = html;
-    
-    // Apply syntax highlighting
-    elements.previewContent.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightElement(block);
-    });
-}
-
 // Generate summary
 async function generateSummary() {
     if (!currentNote) {
@@ -772,7 +986,7 @@ async function performSmartSearch() {
 
 // Enhance text
 async function enhanceText() {
-    const content = elements.noteContent.value.trim();
+    const content = getCurrentContent().trim();
     if (!content) {
         showToast('请先输入内容', 'error');
         return;
@@ -794,7 +1008,7 @@ async function enhanceText() {
         elements.enhanceResult.classList.add('show');
         
         document.getElementById('useEnhanced').addEventListener('click', () => {
-            elements.noteContent.value = result.enhanced;
+            setEditorContent(result.enhanced);
             toggleModal(elements.aiEnhanceModal, false);
             elements.enhanceResult.classList.remove('show');
             showToast('文本已更新');
@@ -806,139 +1020,6 @@ async function enhanceText() {
         elements.doEnhance.disabled = false;
     }
 }
-
-// Event Listeners
-elements.newNoteBtn.addEventListener('click', createNewNote);
-elements.backBtn.addEventListener('click', () => showView('list'));
-elements.saveBtn.addEventListener('click', saveNote);
-elements.deleteBtn.addEventListener('click', deleteNote);
-
-elements.searchInput.addEventListener('input', filterNotes);
-elements.sortSelect.addEventListener('change', filterNotes);
-
-elements.previewBtn.addEventListener('click', () => {
-    updatePreview();
-    elements.tabBtns.forEach(btn => btn.classList.toggle('active'));
-    elements.editTab.classList.toggle('active');
-    elements.previewTab.classList.toggle('active');
-});
-
-elements.tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        elements.tabBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        elements.editTab.classList.toggle('active', tab === 'edit');
-        elements.previewTab.classList.toggle('active', tab === 'preview');
-        
-        if (tab === 'preview') {
-            updatePreview();
-        }
-    });
-});
-
-elements.noteContent.addEventListener('input', () => {
-    // Auto-update preview if visible
-    if (elements.previewTab.classList.contains('active')) {
-        updatePreview();
-    }
-});
-
-elements.generateSummaryBtn.addEventListener('click', generateSummary);
-elements.generateTagsBtn.addEventListener('click', generateTags);
-
-elements.smartSearchBtn.addEventListener('click', () => {
-    elements.smartSearchInput.value = '';
-    toggleModal(elements.smartSearchModal, true);
-});
-
-elements.closeSearchBtn.addEventListener('click', () => showView('list'));
-
-elements.doSmartSearch.addEventListener('click', performSmartSearch);
-elements.smartSearchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') performSmartSearch();
-});
-
-elements.aiEnhanceBtn.addEventListener('click', () => {
-    elements.enhanceResult.classList.remove('show');
-    toggleModal(elements.aiEnhanceModal, true);
-});
-
-elements.doEnhance.addEventListener('click', enhanceText);
-
-elements.modalCloseBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        toggleModal(elements.smartSearchModal, false);
-        toggleModal(elements.aiEnhanceModal, false);
-        toggleModal(elements.shareModal, false);
-        toggleModal(elements.statsModal, false);
-    });
-});
-
-elements.exportJsonBtn.addEventListener('click', async () => {
-    try {
-        await api.download('/api/export/json', 'notes_export.json');
-        showToast('导出成功');
-    } catch (error) {
-        showToast('导出失败: ' + error.message, 'error');
-    }
-});
-
-elements.exportMdBtn.addEventListener('click', async () => {
-    try {
-        await api.download('/api/export/markdown', 'notes_export.md');
-        showToast('导出成功');
-    } catch (error) {
-        showToast('导出失败: ' + error.message, 'error');
-    }
-});
-
-// Logout button
-document.getElementById('logoutBtn').addEventListener('click', logout);
-
-// Close modal when clicking outside
-window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        toggleModal(e.target, false);
-    }
-});
-
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + S to save
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        if (!elements.noteEditView.classList.contains('hidden')) {
-            saveNote();
-        }
-    }
-    
-    // Esc to go back
-    if (e.key === 'Escape') {
-        if (!elements.shareModal.classList.contains('hidden')) {
-            toggleModal(elements.shareModal, false);
-        } else if (!elements.smartSearchModal.classList.contains('hidden')) {
-            toggleModal(elements.smartSearchModal, false);
-        } else if (!elements.aiEnhanceModal.classList.contains('hidden')) {
-            toggleModal(elements.aiEnhanceModal, false);
-        } else if (!elements.statsModal.classList.contains('hidden')) {
-            toggleModal(elements.statsModal, false);
-        } else if (!elements.noteEditView.classList.contains('hidden')) {
-            showView('list');
-        }
-    }
-});
-
-// Initialize
-async function init() {
-    await checkAiStatus();
-    await loadNotes();
-    await loadTags();
-    await loadCollaboratedNotes();
-}
-
-init();
 
 // ========== Share Functions ==========
 
@@ -1000,36 +1081,45 @@ function renderSharesList() {
             : '永不过期';
         
         return `
-            <div class="share-item ${isExpired ? 'expired' : ''}">
+            <div class="share-item ${isExpired ? 'expired' : ''}" data-token="${share.token}">
                 <div class="share-item-info">
-                    <div class="share-item-url">${share.share_url}</div>
+                    <div class="share-item-permission">${permissionText}</div>
                     <div class="share-item-meta">
-                        <span class="share-badge ${share.permission} ${isExpired ? 'expired' : ''}">${permissionText}</span>
-                        <span>过期: ${expiresText}</span>
-                        <span>访问: ${share.access_count}次</span>
+                        访问次数: ${share.access_count} | 过期: ${expiresText} ${isExpired ? '(已过期)' : ''}
                     </div>
                 </div>
                 <div class="share-item-actions">
-                    <button class="share-item-btn copy-btn" data-token="${share.share_token}" title="复制链接">📋</button>
-                    <button class="share-item-btn delete-btn" data-token="${share.share_token}" title="删除">🗑️</button>
+                    <button class="btn-icon share-copy-btn" data-token="${share.token}" title="复制链接">📋</button>
+                    <button class="btn-icon share-delete-btn" data-token="${share.token}" title="删除">🗑️</button>
                 </div>
             </div>
         `;
     }).join('');
     
-    // Add event listeners
-    document.querySelectorAll('.share-item-btn.copy-btn').forEach(btn => {
+    // Add event handlers
+    document.querySelectorAll('.share-copy-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const share = currentShares.find(s => s.share_token === btn.dataset.token);
-            if (share) {
-                copyToClipboard(share.share_url);
+            const token = btn.dataset.token;
+            const shareUrl = `${window.location.origin}/s/${token}`;
+            navigator.clipboard.writeText(shareUrl).then(() => {
                 showToast('链接已复制');
-            }
+            });
         });
     });
     
-    document.querySelectorAll('.share-item-btn.delete-btn').forEach(btn => {
-        btn.addEventListener('click', () => deleteShare(btn.dataset.token));
+    document.querySelectorAll('.share-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const token = btn.dataset.token;
+            if (confirm('确定要删除这个分享链接吗？')) {
+                try {
+                    await api.delete(`/api/shares/${token}`);
+                    showToast('分享链接已删除');
+                    loadNoteShares();
+                } catch (error) {
+                    showToast('删除失败: ' + error.message, 'error');
+                }
+            }
+        });
     });
 }
 
@@ -1041,14 +1131,12 @@ async function createShare() {
     const password = elements.sharePassword.value;
     const expiresDays = elements.shareExpires.value ? parseInt(elements.shareExpires.value) : null;
     
-    // Validate password for password-protected shares
-    if (permission === 'password' && (!password || password.length < 4)) {
-        showToast('请输入至少4位密码', 'error');
-        elements.sharePassword.focus();
+    if (permission === 'password' && !password) {
+        showToast('请设置访问密码', 'error');
         return;
     }
     
-    elements.createShareBtn.innerHTML = '<span class="spinner"></span> 创建中...';
+    elements.createShareBtn.innerHTML = '<span class="spinner"></span>';
     elements.createShareBtn.disabled = true;
     
     try {
@@ -1060,23 +1148,21 @@ async function createShare() {
         });
         
         // Show result
-        elements.createShareForm.classList.add('hidden');
-        elements.shareResult.classList.remove('hidden');
-        elements.existingShares.classList.add('hidden');
-        
-        // Fill result
         elements.shareUrlInput.value = result.share_url;
-        
-        const permissionLabels = {
-            'public': '🔓 公开访问',
-            'password': '🔐 密码保护',
-            'private': '🔒 私密（仅自己）'
-        };
-        elements.shareInfoPermission.textContent = permissionLabels[result.permission] || result.permission;
-        
+        elements.shareInfoPermission.textContent = {
+            'public': '🔓 公开 - 任何人都可以访问',
+            'password': '🔐 密码保护 - 需要密码才能访问',
+            'private': '🔒 私密 - 仅自己可见'
+        }[result.permission];
         elements.shareInfoExpires.textContent = result.expires_at 
             ? new Date(result.expires_at).toLocaleString('zh-CN')
             : '永不过期';
+        
+        elements.createShareForm.classList.add('hidden');
+        elements.shareResult.classList.remove('hidden');
+        
+        // Refresh shares list
+        loadNoteShares();
         
         showToast('分享链接创建成功');
     } catch (error) {
@@ -1087,103 +1173,20 @@ async function createShare() {
     }
 }
 
-// Delete share
-async function deleteShare(shareToken) {
-    if (!confirm('确定要删除这个分享链接吗？')) return;
+// ========== Stats Functions ==========
+
+// Open stats modal
+async function openStatsModal() {
+    toggleModal(elements.statsModal, true);
     
     try {
-        await api.delete(`/api/shares/${shareToken}`);
-        showToast('分享链接已删除');
-        loadNoteShares(); // Refresh list
-    } catch (error) {
-        showToast('删除失败: ' + error.message, 'error');
-    }
-}
-
-// Copy to clipboard
-function copyToClipboard(text) {
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(text);
-    } else {
-        // Fallback
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-    }
-}
-
-// Reset share modal
-function resetShareModal() {
-    elements.sharePermission.value = 'public';
-    elements.sharePassword.value = '';
-    elements.shareExpires.value = '7';
-    elements.passwordGroup.style.display = 'none';
-    elements.createShareForm.classList.remove('hidden');
-    elements.shareResult.classList.add('hidden');
-    elements.existingShares.classList.remove('hidden');
-}
-
-// Share event listeners
-elements.shareBtn.addEventListener('click', openShareModal);
-
-elements.sharePermission.addEventListener('change', () => {
-    const showPassword = elements.sharePermission.value === 'password';
-    elements.passwordGroup.style.display = showPassword ? 'block' : 'none';
-    if (showPassword) {
-        elements.sharePassword.focus();
-    }
-});
-
-elements.createShareBtn.addEventListener('click', createShare);
-
-elements.copyShareUrlBtn.addEventListener('click', () => {
-    copyToClipboard(elements.shareUrlInput.value);
-    showToast('链接已复制到剪贴板');
-});
-
-elements.createNewShareBtn.addEventListener('click', resetShareModal);
-
-elements.closeShareBtn.addEventListener('click', () => {
-    toggleModal(elements.shareModal, false);
-});
-
-// Close share modal when clicking outside
-window.addEventListener('click', (e) => {
-    if (e.target === elements.shareModal) {
-        toggleModal(elements.shareModal, false);
-    }
-});
-
-// ========== Statistics Functions ==========
-
-// Open statistics modal
-function openStatsModal() {
-    loadStatistics();
-    toggleModal(elements.statsModal, true);
-}
-
-// Load statistics from API
-async function loadStatistics() {
-    try {
-        // Show loading state
-        document.getElementById('hourlyChart').innerHTML = '<div class="chart-placeholder">加载中...</div>';
-        document.getElementById('weekdayChart').innerHTML = '<div class="chart-placeholder">加载中...</div>';
-        document.getElementById('activityChart').innerHTML = '<div class="chart-placeholder">加载中...</div>';
-        
         const stats = await api.get('/api/stats/detailed');
         
-        // Update overview cards
-        document.getElementById('statTotalNotes').textContent = stats.total_notes.toLocaleString();
+        // Update stats display
+        document.getElementById('statTotalNotes').textContent = stats.total_notes;
         document.getElementById('statTotalWords').textContent = stats.total_words.toLocaleString();
         document.getElementById('statTotalChars').textContent = stats.total_characters.toLocaleString();
         document.getElementById('statCurrentStreak').textContent = stats.current_streak;
-        
-        // Update recent stats
         document.getElementById('statWeekNotes').textContent = stats.notes_this_week;
         document.getElementById('statMonthNotes').textContent = stats.notes_this_month;
         document.getElementById('statAvgWords').textContent = stats.avg_words_per_note;
@@ -1193,614 +1196,417 @@ async function loadStatistics() {
         renderHourlyChart(stats.hourly_distribution);
         renderWeekdayChart(stats.weekday_distribution);
         renderActivityChart(stats.activity_by_date);
-        
     } catch (error) {
-        console.error('Failed to load statistics:', error);
-        showToast('加载统计数据失败: ' + error.message, 'error');
+        console.error('Failed to load stats:', error);
+        showToast('加载统计数据失败', 'error');
     }
 }
 
 // Render hourly distribution chart
-function renderHourlyChart(hourlyData) {
-    if (!hourlyData || hourlyData.length === 0 || hourlyData.every(d => d.count === 0)) {
-        document.getElementById('hourlyChart').innerHTML = `
-            <div class="no-data">
-                <div class="no-data-icon">📝</div>
-                <span>暂无数据</span>
-            </div>
-        `;
-        return;
-    }
+function renderHourlyChart(data) {
+    const chart = document.getElementById('hourlyChart');
+    const maxCount = Math.max(...data.map(d => d.count));
     
-    const maxCount = Math.max(...hourlyData.map(d => d.count));
-    const html = `
+    chart.innerHTML = `
         <div class="bar-chart">
-            ${hourlyData.map(item => {
-                const height = maxCount > 0 ? (item.count / maxCount * 100) : 0;
-                const label = item.hour.toString().padStart(2, '0');
-                return `
-                    <div class="bar-item" title="${label}:00 - ${item.count} 篇笔记">
-                        ${item.count > 0 ? `<div class="bar-value">${item.count}</div>` : ''}
-                        <div class="bar" style="height: ${height}px;"></div>
-                        <div class="bar-label">${label}</div>
-                    </div>
-                `;
-            }).join('')}
+            ${data.map(d => `
+                <div class="bar-item" title="${d.hour}:00 - ${d.count} 篇">
+                    <div class="bar" style="height: ${maxCount > 0 ? (d.count / maxCount * 100) : 0}%"></div>
+                    <div class="bar-label">${d.hour}</div>
+                </div>
+            `).join('')}
         </div>
     `;
-    document.getElementById('hourlyChart').innerHTML = html;
 }
 
 // Render weekday distribution chart
-function renderWeekdayChart(weekdayData) {
-    if (!weekdayData || weekdayData.length === 0 || weekdayData.every(d => d.count === 0)) {
-        document.getElementById('weekdayChart').innerHTML = `
-            <div class="no-data">
-                <div class="no-data-icon">📝</div>
-                <span>暂无数据</span>
-            </div>
-        `;
-        return;
-    }
+function renderWeekdayChart(data) {
+    const chart = document.getElementById('weekdayChart');
+    const maxCount = Math.max(...data.map(d => d.count));
     
-    const maxCount = Math.max(...weekdayData.map(d => d.count));
-    const html = `
-        <div class="bar-chart">
-            ${weekdayData.map(item => {
-                const height = maxCount > 0 ? (item.count / maxCount * 100) : 0;
+    chart.innerHTML = `
+        <div class="bar-chart horizontal">
+            ${data.map(d => `
+                <div class="bar-row">
+                    <div class="bar-label">${d.day}</div>
+                    <div class="bar-wrapper">
+                        <div class="bar" style="width: ${maxCount > 0 ? (d.count / maxCount * 100) : 0}%"></div>
+                    </div>
+                    <div class="bar-value">${d.count}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Render activity chart
+function renderActivityChart(data) {
+    const chart = document.getElementById('activityChart');
+    const maxCount = Math.max(...data.map(d => d.notes_created));
+    
+    chart.innerHTML = `
+        <div class="activity-bars">
+            ${data.map(d => {
+                const date = new Date(d.date);
+                const dayLabel = `${date.getMonth() + 1}/${date.getDate()}`;
                 return `
-                    <div class="bar-item" title="${item.day} - ${item.count} 篇笔记">
-                        ${item.count > 0 ? `<div class="bar-value">${item.count}</div>` : ''}
-                        <div class="bar" style="height: ${height}px;"></div>
-                        <div class="bar-label">${item.day.slice(0, 2)}</div>
+                    <div class="activity-item" title="${d.date}: ${d.notes_created} 篇笔记, ${d.characters_written} 字符">
+                        <div class="activity-bar ${d.notes_created > 0 ? 'has-activity' : ''}" 
+                             style="height: ${maxCount > 0 && d.notes_created > 0 ? Math.max(20, d.notes_created / maxCount * 100) : 4}px">
+                        </div>
+                        <div class="activity-label">${dayLabel}</div>
                     </div>
                 `;
             }).join('')}
         </div>
     `;
-    document.getElementById('weekdayChart').innerHTML = html;
 }
 
-// Render activity heatmap
-function renderActivityChart(activityData) {
-    if (!activityData || activityData.length === 0) {
-        document.getElementById('activityChart').innerHTML = `
-            <div class="no-data">
-                <div class="no-data-icon">📊</div>
-                <span>暂无活动数据</span>
-            </div>
-        `;
+// ========== Toolbar Handlers ==========
+
+// Handle toolbar button clicks for table
+function handleInsertTable() {
+    const rows = parseInt(document.getElementById('tableRows').value) || 3;
+    const cols = parseInt(document.getElementById('tableCols').value) || 3;
+    const withHeader = document.getElementById('tableHeader').checked;
+    
+    if (richTextEditor && richTextEditor.editor) {
+        richTextEditor.editor.chain().focus().insertTable({ rows, cols, withHeaderRow: withHeader }).run();
+    }
+    
+    toggleModal(elements.tableInsertModal, false);
+}
+
+// Handle link insert
+function handleInsertLink() {
+    const url = document.getElementById('linkUrl').value.trim();
+    const text = document.getElementById('linkText').value.trim();
+    
+    if (!url) {
+        showToast('请输入链接地址', 'error');
         return;
     }
     
-    const maxCount = Math.max(...activityData.map(d => d.notes_created));
+    if (richTextEditor && richTextEditor.editor) {
+        const { editor } = richTextEditor;
+        
+        if (text) {
+            // Insert link with custom text
+            editor.chain().focus().insertContent({
+                type: 'text',
+                text: text,
+                marks: [{
+                    type: 'link',
+                    attrs: { href: url }
+                }]
+            }).run();
+        } else {
+            // Set link on selection or insert with URL as text
+            editor.chain().focus().setLink({ href: url }).run();
+        }
+    }
     
-    const html = `
-        <div class="activity-heatmap">
-            ${activityData.map(item => {
-                if (!item.date) return '';
-                const date = new Date(item.date);
-                const day = date.getDate();
-                const count = item.notes_created;
+    toggleModal(elements.linkInsertModal, false);
+    document.getElementById('linkUrl').value = '';
+    document.getElementById('linkText').value = '';
+}
+
+// Handle image insert
+async function handleInsertImage() {
+    const activeTab = document.querySelector('.upload-tab-btn.active');
+    const tabName = activeTab ? activeTab.dataset.tab : 'upload';
+    
+    if (tabName === 'upload') {
+        const fileInput = document.getElementById('imageFile');
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            try {
+                showToast('正在上传图片...');
+                const url = await uploadImage(file);
                 
-                // Determine level (0-5)
-                let level = 0;
-                if (count > 0) {
-                    if (maxCount <= 1) level = 3;
-                    else level = Math.ceil(count / maxCount * 5);
-                    level = Math.min(level, 5);
+                if (richTextEditor && richTextEditor.editor) {
+                    richTextEditor.editor.chain().focus().setImage({ src: url, alt: file.name }).run();
                 }
                 
-                const tooltip = `${item.date}: ${count} 篇笔记, ${item.characters_written} 字`;
-                
-                return `
-                    <div class="heatmap-cell ${level === 0 ? 'empty' : 'level-' + level}" 
-                         data-tooltip="${tooltip}">
-                        ${day}
-                    </div>
-                `;
-            }).join('')}
-        </div>
-    `;
-    document.getElementById('activityChart').innerHTML = html;
+                showToast('图片插入成功');
+                toggleModal(elements.imageUploadModal, false);
+                fileInput.value = '';
+            } catch (error) {
+                showToast('图片上传失败: ' + error.message, 'error');
+            }
+        } else {
+            showToast('请选择图片文件', 'error');
+        }
+    } else {
+        const url = document.getElementById('imageUrl').value.trim();
+        if (url) {
+            if (richTextEditor && richTextEditor.editor) {
+                richTextEditor.editor.chain().focus().setImage({ src: url }).run();
+            }
+            toggleModal(elements.imageUploadModal, false);
+            document.getElementById('imageUrl').value = '';
+        } else {
+            showToast('请输入图片链接', 'error');
+        }
+    }
 }
 
-// Statistics event listeners
+// Handle attachment upload
+async function handleUploadAttachment() {
+    const fileInput = document.getElementById('attachmentFile');
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        try {
+            showToast('正在上传附件...');
+            const result = await uploadAttachment(file);
+            
+            // Insert attachment link in editor
+            if (richTextEditor && richTextEditor.editor) {
+                richTextEditor.editor.chain().focus().insertContent({
+                    type: 'paragraph',
+                    content: [{
+                        type: 'text',
+                        text: `📎 ${result.original_filename}`,
+                        marks: [{
+                            type: 'link',
+                            attrs: { 
+                                href: result.url,
+                                'data-attachment': 'true'
+                            }
+                        }]
+                    }]
+                }).run();
+            }
+            
+            showToast('附件上传成功');
+            toggleModal(elements.attachmentUploadModal, false);
+            fileInput.value = '';
+        } catch (error) {
+            showToast('附件上传失败: ' + error.message, 'error');
+        }
+    } else {
+        showToast('请选择附件文件', 'error');
+    }
+}
+
+// Handle Markdown export
+function handleMarkdownExport() {
+    const content = getCurrentContent();
+    const title = elements.noteTitle.value || '未命名笔记';
+    
+    const blob = new Blob([`# ${title}\n\n${content}`], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^\w\u4e00-\u9fa5]/g, '_')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Markdown 导出成功');
+}
+
+// Handle Markdown import
+function handleMarkdownImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.md,.markdown,.txt';
+    
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                
+                // Try to extract title from first heading
+                const titleMatch = content.match(/^#\s+(.+)$/m);
+                if (titleMatch && !elements.noteTitle.value) {
+                    elements.noteTitle.value = titleMatch[1].trim();
+                }
+                
+                // Set content
+                setEditorContent(content);
+                showToast('Markdown 导入成功');
+            };
+            reader.readAsText(file);
+        }
+    };
+    
+    input.click();
+}
+
+// ========== Event Listeners ==========
+
+// Main buttons
+elements.newNoteBtn.addEventListener('click', createNewNote);
+elements.backBtn.addEventListener('click', () => showView('list'));
+elements.saveBtn.addEventListener('click', saveNote);
+elements.deleteBtn.addEventListener('click', deleteNote);
+
+// Search and filter
+elements.searchInput.addEventListener('input', filterNotes);
+elements.sortSelect.addEventListener('change', filterNotes);
+
+// Tab switching
+elements.tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        switchTab(btn.dataset.tab);
+    });
+});
+
+// AI actions
+elements.generateSummaryBtn.addEventListener('click', generateSummary);
+elements.generateTagsBtn.addEventListener('click', generateTags);
+
+// Smart search
+elements.smartSearchBtn.addEventListener('click', () => {
+    elements.smartSearchInput.value = '';
+    toggleModal(elements.smartSearchModal, true);
+});
+
+elements.closeSearchBtn.addEventListener('click', () => showView('list'));
+
+elements.doSmartSearch.addEventListener('click', performSmartSearch);
+elements.smartSearchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') performSmartSearch();
+});
+
+// AI enhance
+elements.aiEnhanceBtn.addEventListener('click', () => {
+    elements.enhanceResult.classList.remove('show');
+    toggleModal(elements.aiEnhanceModal, true);
+});
+
+elements.doEnhance.addEventListener('click', enhanceText);
+
+// Modal close buttons
+elements.modalCloseBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const modal = btn.closest('.modal');
+        if (modal) toggleModal(modal, false);
+    });
+});
+
+// Export
+elements.exportJsonBtn.addEventListener('click', async () => {
+    try {
+        await api.download('/api/export/json', 'notes_export.json');
+        showToast('导出成功');
+    } catch (error) {
+        showToast('导出失败: ' + error.message, 'error');
+    }
+});
+
+elements.exportMdBtn.addEventListener('click', async () => {
+    try {
+        await api.download('/api/export/markdown', 'notes_export.md');
+        showToast('导出成功');
+    } catch (error) {
+        showToast('导出失败: ' + error.message, 'error');
+    }
+});
+
+// Share
+elements.shareBtn.addEventListener('click', openShareModal);
+elements.sharePermission.addEventListener('change', () => {
+    elements.passwordGroup.style.display = 
+        elements.sharePermission.value === 'password' ? 'block' : 'none';
+});
+elements.createShareBtn.addEventListener('click', createShare);
+elements.copyShareUrlBtn.addEventListener('click', () => {
+    elements.shareUrlInput.select();
+    document.execCommand('copy');
+    showToast('链接已复制');
+});
+elements.createNewShareBtn.addEventListener('click', () => {
+    elements.createShareForm.classList.remove('hidden');
+    elements.shareResult.classList.add('hidden');
+});
+elements.closeShareBtn.addEventListener('click', () => {
+    toggleModal(elements.shareModal, false);
+});
+
+// Stats
 elements.statsBtn.addEventListener('click', openStatsModal);
 
-// Close stats modal when clicking outside
-elements.statsModal.addEventListener('click', (e) => {
-    if (e.target === elements.statsModal) {
-        toggleModal(elements.statsModal, false);
+// Collaboration
+elements.collaborationBtn.addEventListener('click', openCollaborationModal);
+elements.versionsBtn.addEventListener('click', openVersionsModal);
+elements.addCollaboratorBtn.addEventListener('click', addCollaborator);
+
+// Toolbar buttons for table, link, image, attachment
+document.getElementById('insertTableBtn')?.addEventListener('click', handleInsertTable);
+document.getElementById('insertLinkBtn')?.addEventListener('click', handleInsertLink);
+document.getElementById('insertImageBtn')?.addEventListener('click', handleInsertImage);
+document.getElementById('uploadAttachmentBtn')?.addEventListener('click', handleUploadAttachment);
+
+// Markdown import/export
+document.getElementById('mdExportBtn')?.addEventListener('click', handleMarkdownExport);
+document.getElementById('mdImportBtn')?.addEventListener('click', handleMarkdownImport);
+
+// Upload tabs
+document.querySelectorAll('.upload-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.upload-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.upload-tab-content').forEach(content => {
+            content.classList.toggle('active', content.id === tab + 'Tab');
+        });
+    });
+});
+
+// Logout button
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try {
+        await api.post('/api/auth/logout', {});
+        window.location.href = '/login';
+    } catch (error) {
+        console.error('Logout error:', error);
+        window.location.href = '/login';
     }
 });
 
-// ========== Collaboration Event Listeners ==========
-
-// Collaboration modal
-if (elements.collaborationBtn) {
-    elements.collaborationBtn.addEventListener('click', openCollaborationModal);
-}
-
-// Versions modal
-if (elements.versionsBtn) {
-    elements.versionsBtn.addEventListener('click', openVersionsModal);
-}
-
-// Add collaborator
-if (elements.addCollaboratorBtn) {
-    elements.addCollaboratorBtn.addEventListener('click', addCollaborator);
-}
-
-// Close collaboration modals when clicking outside
+// Close modal when clicking outside
 window.addEventListener('click', (e) => {
-    if (e.target === elements.collaborationModal) {
-        toggleModal(elements.collaborationModal, false);
-        if (window.collaborationManager) {
-            window.collaborationManager.disconnect();
-        }
-    }
-    if (e.target === elements.versionsModal) {
-        toggleModal(elements.versionsModal, false);
+    if (e.target.classList.contains('modal')) {
+        toggleModal(e.target, false);
     }
 });
 
-
-// ========== Rich Text Editor Integration (See initialization at end of file) ==========
-
-// Initialize rich text editor
-function initRichTextEditor() {
-    // Check if TipTap is available
-    if (typeof window.tiptap === 'undefined') {
-        console.warn('TipTap not loaded, falling back to textarea');
-        return;
-    }
-    
-    // Create editor instance
-    richTextEditor = new RichTextEditor({
-        element: document.getElementById('editor'),
-        onChange: (html) => {
-            // Sync with markdown tab if needed
-            syncMarkdownFromHTML(html);
-            // Track changes for collaboration
-            if (typeof trackChanges === 'function') {
-                trackChanges();
-            }
-        },
-        onImageUpload: async (file) => {
-            return await uploadImageFile(file);
-        },
-        onAttachmentUpload: async (file) => {
-            return await uploadAttachmentFile(file);
-        }
-    });
-    
-    isEditorReady = true;
-    console.log('Rich text editor initialized successfully');
-}
-
-// Upload image file
-async function uploadImageFile(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await fetch('/api/upload/image', {
-        method: 'POST',
-        body: formData
-    });
-    
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
-    }
-    
-    const result = await response.json();
-    return result.url;
-}
-
-// Upload attachment file
-async function uploadAttachmentFile(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await fetch('/api/upload/attachment', {
-        method: 'POST',
-        body: formData
-    });
-    
-    if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
-    }
-    
-    const result = await response.json();
-    
-    // Store attachment info
-    currentAttachments.push({
-        id: result.id,
-        filename: result.original_filename,
-        size: result.file_size,
-        url: result.url,
-        type: result.file_type
-    });
-    
-    renderAttachmentList();
-    
-    return {
-        id: result.id,
-        filename: result.original_filename,
-        size: result.file_size,
-        url: result.url
-    };
-}
-
-// Render attachment list
-function renderAttachmentList() {
-    let container = document.getElementById('attachmentList');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'attachmentList';
-        container.className = 'attachment-list';
-        document.querySelector('.editor-container').insertBefore(
-            container, 
-            document.querySelector('.note-meta')
-        );
-    }
-    
-    if (currentAttachments.length === 0) {
-        container.innerHTML = '';
-        container.style.display = 'none';
-        return;
-    }
-    
-    container.style.display = 'block';
-    container.innerHTML = `
-        <div class="attachment-section">
-            <h4>📎 附件 (${currentAttachments.length})</h4>
-            <div class="attachment-items">
-                ${currentAttachments.map(att => `
-                    <div class="attachment-item" data-id="${att.id}">
-                        <span class="attachment-icon">${getFileIcon(att.filename)}</span>
-                        <span class="attachment-name">${escapeHtml(att.filename)}</span>
-                        <span class="attachment-size">${formatFileSize(att.size)}</span>
-                        <button class="attachment-remove" data-id="${att.id}" title="删除">×</button>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-    
-    // Add remove handlers
-    container.querySelectorAll('.attachment-remove').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = parseInt(btn.dataset.id);
-            currentAttachments = currentAttachments.filter(a => a.id !== id);
-            renderAttachmentList();
-        });
-    });
-}
-
-// Get file icon based on extension
-function getFileIcon(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    const icons = {
-        'pdf': '📄',
-        'doc': '📝', 'docx': '📝',
-        'xls': '📊', 'xlsx': '📊',
-        'ppt': '📈', 'pptx': '📈',
-        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'webp': '🖼️', 'svg': '🖼️',
-        'mp4': '🎬', 'avi': '🎬', 'mov': '🎬',
-        'mp3': '🎵', 'wav': '🎵',
-        'zip': '📦', 'rar': '📦', '7z': '📦',
-        'txt': '📃', 'md': '📃',
-        'json': '⚙️', 'js': '⚙️', 'py': '⚙️', 'html': '⚙️', 'css': '⚙️'
-    };
-    return icons[ext] || '📎';
-}
-
-// Format file size
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-// Sync markdown from HTML
-function syncMarkdownFromHTML(html) {
-    // Only update markdown tab if Turndown is available
-    if (typeof TurndownService !== 'undefined') {
-        const turndown = new TurndownService({
-            headingStyle: 'atx',
-            codeBlockStyle: 'fenced'
-        });
-        const markdown = turndown.turndown(html);
-        const mdTextarea = document.getElementById('markdownContent');
-        if (mdTextarea) {
-            mdTextarea.value = markdown;
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + S to save
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (!elements.noteEditView.classList.contains('hidden')) {
+            saveNote();
         }
     }
-}
-
-// Sync HTML from markdown
-function syncHTMLFromMarkdown() {
-    const mdTextarea = document.getElementById('markdownContent');
-    if (mdTextarea && richTextEditor && typeof marked !== 'undefined') {
-        const markdown = mdTextarea.value;
-        const html = marked.parse(markdown);
-        richTextEditor.setHTML(html);
-    }
-}
-
-// Get editor content (for saving)
-function getEditorContent() {
-    // Get active tab
-    const activeTab = document.querySelector('.tab-btn.active');
-    const tabName = activeTab ? activeTab.dataset.tab : 'edit';
     
-    // If markdown tab is active, get content from textarea
-    if (tabName === 'markdown') {
-        const mdTextarea = document.getElementById('markdownContent');
-        return mdTextarea ? mdTextarea.value : '';
-    }
-    
-    // Otherwise get from rich text editor
-    if (richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
-        // Convert HTML to Markdown for storage
-        const html = richTextEditor.getHTML();
-        if (typeof TurndownService !== 'undefined') {
-            const turndown = new TurndownService({
-                headingStyle: 'atx',
-                codeBlockStyle: 'fenced'
-            });
-            // Add rule for task lists
-            turndown.addRule('taskList', {
-                filter: function (node) {
-                    return node.type === 'checkbox' && node.parentNode.nodeName === 'LI';
-                },
-                replacement: function (content, node) {
-                    return (node.checked ? '[x]' : '[ ]') + ' ';
-                }
-            });
-            // Add rule for tables
-            turndown.addRule('table', {
-                filter: 'table',
-                replacement: function(content) {
-                    return '\n\n' + content + '\n\n';
-                }
-            });
-            return turndown.turndown(html);
-        }
-        return html;
-    }
-    return elements.noteContent ? elements.noteContent.value : '';
-}
-
-// Set editor content (when loading note)
-function setEditorContent(markdown) {
-    // Update rich text editor
-    if (richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
-        // Convert Markdown to HTML
-        if (typeof marked !== 'undefined') {
-            const html = marked.parse(markdown);
-            richTextEditor.setHTML(html);
-        } else {
-            richTextEditor.setHTML(markdown);
+    // Esc to go back
+    if (e.key === 'Escape') {
+        const openModal = document.querySelector('.modal:not(.hidden)');
+        if (openModal) {
+            toggleModal(openModal, false);
+        } else if (!elements.noteEditView.classList.contains('hidden')) {
+            showView('list');
         }
     }
-    // Also update textarea as fallback
-    if (elements.noteContent) {
-        elements.noteContent.value = markdown;
-    }
-    // Update markdown tab
-    const mdTextarea = document.getElementById('markdownContent');
-    if (mdTextarea) {
-        mdTextarea.value = markdown;
-    }
-}
+});
 
-// Load note attachments
-async function loadNoteAttachments(noteId) {
-    try {
-        const result = await api.get(`/api/notes/${noteId}/attachments`);
-        currentAttachments = result.attachments.map(att => ({
-            id: att.id,
-            filename: att.original_filename,
-            size: att.file_size,
-            url: att.url,
-            type: att.file_type
-        }));
-        renderAttachmentList();
-    } catch (error) {
-        console.error('Failed to load attachments:', error);
-        currentAttachments = [];
-        renderAttachmentList();
-    }
-}
-
-// Override openNote to use editor
-const originalOpenNote = openNote;
-openNote = async function(id) {
-    try {
-        currentNote = await api.get(`/api/notes/${id}`);
-        
-        elements.noteTitle.value = currentNote.title;
-        
-        // Set editor content
-        setEditorContent(currentNote.content);
-        
-        renderNoteMeta();
-        
-        // Show AI actions if available
-        elements.aiActions.style.display = isAiAvailable ? 'flex' : 'none';
-        elements.aiEnhanceBtn.style.display = isAiAvailable ? 'inline-block' : 'none';
-        
-        // Show share button
-        elements.shareBtn.style.display = 'inline-block';
-        
-        // Load attachments
-        await loadNoteAttachments(id);
-        
-        showView('edit');
-        updatePreview();
-    } catch (error) {
-        showToast('加载笔记失败: ' + error.message, 'error');
-    }
-};
-
-// Override createNewNote to use editor
-const originalCreateNewNote = createNewNote;
-createNewNote = function() {
-    currentNote = null;
-    elements.noteTitle.value = '';
+// Initialize
+async function init() {
+    await checkAiStatus();
+    await loadNotes();
+    await loadTags();
+    await loadCollaboratedNotes();
     
-    // Clear editor
-    setEditorContent('');
-    
-    // Clear attachments
-    currentAttachments = [];
-    renderAttachmentList();
-    
-    elements.noteTags.innerHTML = '';
-    elements.noteSummary.innerHTML = '';
-    elements.noteDates.innerHTML = '';
-    elements.aiActions.style.display = isAiAvailable ? 'flex' : 'none';
-    elements.aiEnhanceBtn.style.display = isAiAvailable ? 'inline-block' : 'none';
-    
-    // Hide share button for new notes
-    elements.shareBtn.style.display = 'none';
-    
-    showView('edit');
-    elements.noteTitle.focus();
-};
-
-// Override saveNote to use editor content
-const originalSaveNote = saveNote;
-saveNote = async function() {
-    const title = elements.noteTitle.value.trim();
-    const content = getEditorContent();
-    
-    if (!title) {
-        showToast('请输入标题', 'error');
-        return;
-    }
-    
-    try {
-        if (currentNote) {
-            // Update existing
-            const result = await api.put(`/api/notes/${currentNote.id}`, { title, content });
-            currentNote = result;
-            showToast('笔记已更新');
-        } else {
-            // Create new
-            const result = await api.post('/api/notes', { title, content });
-            currentNote = result;
-            showToast('笔记已创建');
-        }
-        
-        // Reload notes
-        await loadNotes();
-        renderNoteMeta();
-    } catch (error) {
-        showToast('保存失败: ' + error.message, 'error');
-    }
-};
-
-// Override updatePreview to use editor content
-const originalUpdatePreview = updatePreview;
-updatePreview = function() {
-    const content = getEditorContent();
-    
-    // Parse markdown
-    let html = marked.parse(content);
-    
-    // Sanitize HTML to prevent XSS attacks
-    if (typeof DOMPurify !== 'undefined') {
-        html = DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
-    }
-    
-    elements.previewContent.innerHTML = html;
-    
-    // Apply syntax highlighting
-    elements.previewContent.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightElement(block);
-    });
-};
-
-// Tab switching for editor tabs - Sync content between modes
-function setupTabSync() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.dataset.tab;
-            const prevTab = document.querySelector('.tab-btn.active')?.dataset.tab;
-            
-            // Update active states
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Show/hide tab content
-            document.getElementById('editTab').classList.toggle('active', tab === 'edit');
-            document.getElementById('previewTab').classList.toggle('active', tab === 'preview');
-            document.getElementById('markdownTab').classList.toggle('active', tab === 'markdown');
-            
-            // Sync content between tabs
-            if (tab === 'preview') {
-                updatePreview();
-            } else if (tab === 'markdown' && prevTab === 'edit') {
-                // Switching from edit to markdown - sync HTML to markdown
-                if (richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
-                    const html = richTextEditor.getHTML();
-                    syncMarkdownFromHTML(html);
-                }
-            } else if (tab === 'edit' && prevTab === 'markdown') {
-                // Switching from markdown to edit - sync markdown to HTML
-                const mdTextarea = document.getElementById('markdownContent');
-                if (mdTextarea && richTextEditor && richTextEditor.isReady && richTextEditor.isReady()) {
-                    const html = marked.parse(mdTextarea.value);
-                    richTextEditor.setHTML(html);
-                }
-            }
-        });
-    });
-}
-
-// ========== Initialization ==========
-
-// Wait for TipTap to load from CDN
-function waitForTipTap(callback, maxAttempts = 50) {
-    let attempts = 0;
-    const check = () => {
-        attempts++;
-        if (typeof window.tiptap !== 'undefined' && 
-            typeof window.tiptapStarterKit !== 'undefined') {
-            callback();
-        } else if (attempts < maxAttempts) {
-            setTimeout(check, 100);
-        } else {
-            console.warn('TipTap failed to load, using fallback textarea');
-        }
-    };
-    check();
-}
-
-// Initialize application
-document.addEventListener('DOMContentLoaded', () => {
     // Initialize rich text editor
-    waitForTipTap(() => {
-        initRichTextEditor();
-        setupTabSync();
-    });
-});
-
-// Also try to initialize immediately in case DOM is already loaded
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    waitForTipTap(() => {
-        initRichTextEditor();
-        setupTabSync();
-    });
+    initRichTextEditor();
 }
 
-// ========== Collaboration Integration (Loaded from collaboration.js) ==========
-// Collaboration functions are defined in collaboration.js and integrated in init()
+// Start the app
+init();

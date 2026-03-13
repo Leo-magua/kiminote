@@ -2010,3 +2010,160 @@ button {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* Activity Chart Styles */
+.activity-chart {
+    min-height: 120px;
+}
+
+.activity-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 100px;
+    gap: 2px;
+    padding-bottom: 24px;
+    position: relative;
+}
+
+.activity-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+}
+
+.activity-bar {
+    width: 100%;
+    min-height: 4px;
+    background: var(--border);
+    border-radius: 2px 2px 0 0;
+    transition: all 0.2s;
+}
+
+.activity-bar.has-activity {
+    background: linear-gradient(180deg, var(--primary) 0%, #7c3aed 100%);
+}
+
+.activity-bar:hover {
+    opacity: 0.8;
+}
+
+.activity-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-align: center;
+    transform: rotate(-45deg);
+    transform-origin: top center;
+    white-space: nowrap;
+}
+
+/* Horizontal Bar Chart */
+.bar-chart.horizontal {
+    flex-direction: column;
+    height: auto;
+    gap: 8px;
+}
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bar-row .bar-label {
+    width: 40px;
+    text-align: right;
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+.bar-wrapper {
+    flex: 1;
+    height: 20px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-row .bar {
+    height: 100%;
+    border-radius: 0 4px 4px 0;
+    transition: width 0.3s ease;
+}
+
+.bar-value {
+    width: 30px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Share Item Additional Styles */
+.share-item-permission {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.share-item.expired {
+    opacity: 0.6;
+    background: var(--bg-tertiary);
+}
+
+/* Horizontal bar for weekday chart */
+.weekday-chart .bar-row {
+    margin-bottom: 8px;
+}
+
+.weekday-chart .bar-label {
+    width: 50px;
+}
+
+/* Activity Heatmap */
+.activity-heatmap {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: white;
+    font-weight: 600;
+    position: relative;
+    cursor: pointer;
+}
+
+.heatmap-cell.empty {
+    background: var(--border);
+}
+
+.heatmap-cell.level-1 { background: #dbeafe; color: #1e40af; }
+.heatmap-cell.level-2 { background: #93c5fd; color: #1e3a8a; }
+.heatmap-cell.level-3 { background: #3b82f6; color: white; }
+.heatmap-cell.level-4 { background: #1d4ed8; color: white; }
+.heatmap-cell.level-5 { background: #1e40af; color: white; }
+
+.heatmap-cell:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 10;
+    margin-bottom: 4px;
+}
