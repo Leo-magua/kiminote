@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享笔记 - {{ app_name }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/share.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+</head>
+<body>
+    <div class="share-container">
+        <!-- Header -->
+        <header class="share-header">
+            <div class="share-header-content">
+                <a href="/" class="share-logo">
+                    <span class="logo-icon">📝</span>
+                    <span class="logo-text">{{ app_name }}</span>
+                </a>
+                <div class="share-actions">
+                    <a href="/" class="btn btn-secondary">去首页</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="share-main">
+            {% if error %}
+            <!-- Error State -->
+            <div class="share-card error-card">
+                <div class="error-icon">⚠️</div>
+                <h2>访问失败</h2>
+                <p class="error-message">{{ error }}</p>
+                
+                {% if require_password %}
+                <!-- Password Form -->
+                <form class="password-form" method="GET" action="/s/{{ share_token }}">
+                    <div class="form-group">
+                        <label for="password">请输入访问密码</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-input" 
+                            placeholder="输入密码..."
+                            required
+                            autofocus
+                        >
+                    </div>
+                    <button type="submit" class="btn btn-primary">验证密码</button>
+                </form>
+                {% endif %}
+                
+                <div class="error-actions">
+                    <a href="/" class="btn btn-secondary">返回首页</a>
+                </div>
+            </div>
+            
+            {% elif note %}
+            <!-- Note Content -->
+            <article class="share-card note-card">
+                <!-- Note Header -->
+                <header class="note-header">
+                    <h1 class="note-title">{{ note.title }}</h1>
+                    
+                    <div class="note-meta">
+                        {% if note_dict.tags %}
+                        <div class="note-tags">
+                            {% for tag in note_dict.tags %}
+                            <span class="note-tag">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="note-dates">
+                            <span>创建: {{ note.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            <span>更新: {{ note.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
+                    </div>
+                    
+                    {% if note.summary %}
+                    <div class="note-summary">
+                        <strong>🤖 AI 摘要:</strong> {{ note.summary }}
+                    </div>
+                    {% endif %}
+                </header>
+
+                <!-- Note Content -->
+                <div class="note-content markdown-body" id="noteContent">
+                    {{ html_content | safe }}
+                </div>
+
+                <!-- Share Footer -->
+                <footer class="share-footer">
+                    <div class="share-stats">
+                        <span>👁️ 浏览次数: {{ access_count }}</span>
+                    </div>
+                    <div class="share-powered">
+                        由 <a href="/">{{ app_name }}</a> 提供分享服务
+                    </div>
+                </footer>
+            </article>
+            {% endif %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="share-page-footer">
+            <p>&copy; {{ app_name }} - 智能笔记应用</p>
+        </footer>
+    </div>
+
+    <script>
+        // Configure marked.js
+        marked.setOptions({
+            gfm: true,
+            breaks: true,
+            tables: true,
+            sanitize: false,
+            smartLists: true,
+            smartypants: true,
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(code, { language: lang }).value;
+                    } catch (e) {}
+                }
+                try {
+                    return hljs.highlightAuto(code).value;
+                } catch (e) {}
+                return code;
+            }
+        });
+
+        // Apply syntax highlighting to code blocks
+        document.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+
+        // Open external links in new tab
+        document.querySelectorAll('.markdown-body a').forEach(link => {
+            if (link.hostname !== window.location.hostname) {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+    </script>
+</body>
+</html>

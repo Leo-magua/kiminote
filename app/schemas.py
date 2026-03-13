@@ -128,6 +128,56 @@ class MarkdownPreviewRequest(BaseModel):
     }
 
 
+class ShareCreateRequest(BaseModel):
+    """创建分享请求"""
+    note_id: int = Field(..., description="要分享的笔记ID")
+    permission: str = Field("public", description="分享权限: public(公开), password(密码保护), private(私密)")
+    password: Optional[str] = Field(None, min_length=4, max_length=50, description="访问密码（仅password权限时需要）")
+    expires_days: Optional[int] = Field(None, ge=1, le=365, description="过期天数（可选，1-365天）")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "note_id": 1,
+                "permission": "public",
+                "password": None,
+                "expires_days": 7
+            }
+        }
+    }
+
+
+class ShareVerifyRequest(BaseModel):
+    """验证分享密码请求"""
+    password: str = Field(..., min_length=1, description="访问密码")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "password": "123456"
+            }
+        }
+    }
+
+
+class ShareUpdateRequest(BaseModel):
+    """更新分享请求"""
+    permission: Optional[str] = Field(None, description="分享权限: public, password, private")
+    password: Optional[str] = Field(None, description="新密码（设置为null则移除密码）")
+    is_active: Optional[bool] = Field(None, description="是否激活")
+    expires_days: Optional[int] = Field(None, ge=1, le=365, description="新的过期天数（从当前时间开始计算）")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "permission": "password",
+                "password": "newpassword",
+                "is_active": True
+            }
+        }
+    }
+
+
 # ============== Response Models ==============
 
 class UserResponse(BaseModel):
@@ -334,6 +384,173 @@ class ErrorResponse(BaseModel):
         "json_schema_extra": {
             "example": {
                 "detail": "请求参数错误"
+            }
+        }
+    }
+
+
+class ShareResponse(BaseModel):
+    """分享信息响应"""
+    id: int = Field(..., description="分享ID")
+    share_token: str = Field(..., description="分享令牌（短链接码）")
+    note_id: int = Field(..., description="笔记ID")
+    user_id: int = Field(..., description="创建者用户ID")
+    permission: str = Field(..., description="分享权限")
+    has_password: bool = Field(..., description="是否有密码保护")
+    expires_at: Optional[str] = Field(None, description="过期时间")
+    access_count: int = Field(..., description="访问次数")
+    created_at: Optional[str] = Field(None, description="创建时间")
+    updated_at: Optional[str] = Field(None, description="更新时间")
+    is_active: bool = Field(..., description="是否激活")
+    is_expired: bool = Field(..., description="是否已过期")
+    share_url: Optional[str] = Field(None, description="完整分享链接")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "share_token": "aB3xK9mP",
+                "note_id": 1,
+                "user_id": 1,
+                "permission": "public",
+                "has_password": False,
+                "expires_at": "2026-03-20T12:00:00",
+                "access_count": 5,
+                "created_at": "2026-03-13T12:00:00",
+                "updated_at": "2026-03-13T12:00:00",
+                "is_active": True,
+                "is_expired": False,
+                "share_url": "http://localhost:8000/s/aB3xK9mP"
+            }
+        }
+    }
+
+
+class ShareListResponse(BaseModel):
+    """分享列表响应"""
+    shares: List[ShareResponse] = Field(..., description="分享列表")
+    total: int = Field(..., description="总数")
+
+
+class ShareNoteResponse(BaseModel):
+    """通过分享访问笔记的响应"""
+    note: NoteResponse = Field(..., description="笔记内容")
+    share_token: str = Field(..., description="分享令牌")
+    permission: str = Field(..., description="分享权限")
+    access_count: int = Field(..., description="访问次数")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "note": {
+                    "id": 1,
+                    "user_id": 1,
+                    "title": "我的笔记",
+                    "content": "# 笔记内容",
+                    "summary": None,
+                    "tags": [],
+                    "created_at": "2026-03-13T12:00:00",
+                    "updated_at": "2026-03-13T12:00:00"
+                },
+                "share_token": "aB3xK9mP",
+                "permission": "public",
+                "access_count": 5
+            }
+        }
+    }
+
+
+class ShareVerifyResponse(BaseModel):
+    """分享密码验证响应"""
+    valid: bool = Field(..., description="密码是否正确")
+    message: str = Field(..., description="提示信息")
+    share_url: Optional[str] = Field(None, description="验证通过后的访问链接")
+
+
+# ============== Statistics Models ==============
+
+class ActivityItem(BaseModel):
+    """每日活动统计项"""
+    date: Optional[str] = Field(None, description="日期 (ISO 8601 格式)")
+    notes_created: int = Field(..., ge=0, description="创建的笔记数量")
+    characters_written: int = Field(..., ge=0, description="写入的字符数")
+
+
+class HourlyDistributionItem(BaseModel):
+    """小时分布统计项"""
+    hour: int = Field(..., ge=0, le=23, description="小时 (0-23)")
+    count: int = Field(..., ge=0, description="笔记数量")
+
+
+class WeekdayDistributionItem(BaseModel):
+    """星期分布统计项"""
+    day: str = Field(..., description="星期名称")
+    count: int = Field(..., ge=0, description="笔记数量")
+
+
+class DetailedStatsResponse(BaseModel):
+    """详细统计数据响应"""
+    total_notes: int = Field(..., ge=0, description="笔记总数")
+    total_words: int = Field(..., ge=0, description="总词数")
+    total_characters: int = Field(..., ge=0, description="总字符数")
+    avg_words_per_note: float = Field(..., description="平均每笔记词数")
+    avg_characters_per_note: float = Field(..., description="平均每笔记字符数")
+    notes_this_week: int = Field(..., ge=0, description="本周创建笔记数")
+    notes_this_month: int = Field(..., ge=0, description="本月创建笔记数")
+    current_streak: int = Field(..., ge=0, description="当前连续写作天数")
+    first_note_date: Optional[str] = Field(None, description="第一篇笔记创建时间")
+    activity_by_date: List[ActivityItem] = Field(default_factory=list, description="最近30天活动统计")
+    hourly_distribution: List[HourlyDistributionItem] = Field(default_factory=list, description="24小时写作分布")
+    weekday_distribution: List[WeekdayDistributionItem] = Field(default_factory=list, description="星期分布统计")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "total_notes": 42,
+                "total_words": 15000,
+                "total_characters": 45000,
+                "avg_words_per_note": 357.1,
+                "avg_characters_per_note": 1071.4,
+                "notes_this_week": 5,
+                "notes_this_month": 18,
+                "current_streak": 7,
+                "first_note_date": "2026-01-15T08:30:00",
+                "activity_by_date": [
+                    {"date": "2026-03-13", "notes_created": 2, "characters_written": 1200}
+                ],
+                "hourly_distribution": [
+                    {"hour": 9, "count": 5},
+                    {"hour": 14, "count": 8}
+                ],
+                "weekday_distribution": [
+                    {"day": "周一", "count": 10},
+                    {"day": "周二", "count": 8}
+                ]
+            }
+        }
+    }
+
+
+class DailyStatsItem(BaseModel):
+    """每日统计数据项"""
+    date: Optional[str] = Field(None, description="日期 (ISO 8601 格式)")
+    notes_created: int = Field(..., ge=0, description="创建的笔记数量")
+    total_characters: int = Field(..., ge=0, description="总字符数")
+    avg_characters: float = Field(..., description="平均字符数")
+
+
+class DailyStatsResponse(BaseModel):
+    """每日统计响应"""
+    days: int = Field(..., description="统计天数")
+    stats: List[DailyStatsItem] = Field(..., description="每日统计数据")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "days": 7,
+                "stats": [
+                    {"date": "2026-03-13", "notes_created": 2, "total_characters": 1200, "avg_characters": 600}
+                ]
             }
         }
     }

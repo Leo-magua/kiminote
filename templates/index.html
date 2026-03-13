@@ -52,6 +52,11 @@
                 <span id="notesCount">0 笔记</span>
             </div>
             
+            <div class="stats-section-sidebar">
+                <h3>📊 数据统计</h3>
+                <button id="statsBtn" class="btn-secondary">查看统计</button>
+            </div>
+            
             <div class="export-section">
                 <h3>📤 导出</h3>
                 <button id="exportJsonBtn" class="btn-secondary">导出 JSON</button>
@@ -81,6 +86,7 @@
                 <div class="view-header">
                     <button id="backBtn" class="btn-text">← 返回</button>
                     <div class="view-actions">
+                        <button id="shareBtn" class="btn-secondary" style="display: none;">分享</button>
                         <button id="previewBtn" class="btn-secondary">预览</button>
                         <button id="aiEnhanceBtn" class="btn-ai" style="display: none;">AI 增强</button>
                         <button id="saveBtn" class="btn-primary">保存</button>
@@ -153,6 +159,82 @@
         </div>
     </div>
     
+    <!-- Statistics Modal -->
+    <div id="statsModal" class="modal hidden">
+        <div class="modal-content modal-content-large">
+            <div class="modal-header">
+                <h3>📊 数据统计</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 统计概览卡片 -->
+                <div class="stats-overview">
+                    <div class="stat-card">
+                        <div class="stat-number" id="statTotalNotes">0</div>
+                        <div class="stat-label">笔记总数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="statTotalWords">0</div>
+                        <div class="stat-label">总词数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="statTotalChars">0</div>
+                        <div class="stat-label">总字符数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="statCurrentStreak">0</div>
+                        <div class="stat-label">连续写作天数</div>
+                    </div>
+                </div>
+                
+                <!-- 近期统计 -->
+                <div class="stats-recent">
+                    <div class="stat-item">
+                        <span class="stat-item-label">本周新增:</span>
+                        <span class="stat-item-value" id="statWeekNotes">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-item-label">本月新增:</span>
+                        <span class="stat-item-value" id="statMonthNotes">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-item-label">平均每笔记词数:</span>
+                        <span class="stat-item-value" id="statAvgWords">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-item-label">平均每笔记字符数:</span>
+                        <span class="stat-item-value" id="statAvgChars">0</span>
+                    </div>
+                </div>
+                
+                <!-- 写作习惯图表 -->
+                <div class="stats-charts">
+                    <div class="chart-container">
+                        <h4>🕐 24小时写作分布</h4>
+                        <div id="hourlyChart" class="chart">
+                            <div class="chart-placeholder">加载中...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h4>📅 星期写作分布</h4>
+                        <div id="weekdayChart" class="chart">
+                            <div class="chart-placeholder">加载中...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 最近活动 -->
+                <div class="stats-activity">
+                    <h4>📈 最近30天活动</h4>
+                    <div id="activityChart" class="activity-chart">
+                        <div class="chart-placeholder">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- AI Enhance Modal -->
     <div id="aiEnhanceModal" class="modal hidden">
         <div class="modal-content">
@@ -171,6 +253,85 @@
                 </select>
                 <button id="doEnhance" class="btn-primary">增强</button>
                 <div id="enhanceResult" class="enhance-result"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal hidden">
+        <div class="modal-content share-modal-content">
+            <div class="modal-header">
+                <h3>📤 分享笔记</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Create Share Form -->
+                <div id="createShareForm">
+                    <p class="hint">创建分享链接，其他人可以通过链接访问此笔记</p>
+                    
+                    <div class="form-group">
+                        <label>分享权限</label>
+                        <select id="sharePermission" class="form-select">
+                            <option value="public">🔓 公开 - 任何人都可以访问</option>
+                            <option value="password">🔐 密码保护 - 需要密码才能访问</option>
+                            <option value="private">🔒 私密 - 仅自己可见</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="passwordGroup" style="display: none;">
+                        <label>访问密码</label>
+                        <input type="password" id="sharePassword" class="form-input" placeholder="设置访问密码..." minlength="4">
+                        <span class="form-hint">至少4个字符</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>过期时间（可选）</label>
+                        <select id="shareExpires" class="form-select">
+                            <option value="">永不过期</option>
+                            <option value="1">1天后过期</option>
+                            <option value="7" selected>7天后过期</option>
+                            <option value="30">30天后过期</option>
+                            <option value="90">90天后过期</option>
+                        </select>
+                    </div>
+                    
+                    <button id="createShareBtn" class="btn-primary">创建分享</button>
+                </div>
+                
+                <!-- Share Result -->
+                <div id="shareResult" class="hidden">
+                    <div class="share-success">
+                        <div class="success-icon">✅</div>
+                        <p>分享链接已创建！</p>
+                    </div>
+                    
+                    <div class="share-url-box">
+                        <input type="text" id="shareUrlInput" class="share-url-input" readonly>
+                        <button id="copyShareUrlBtn" class="btn-secondary">复制链接</button>
+                    </div>
+                    
+                    <div class="share-info">
+                        <div class="share-info-item">
+                            <span class="label">权限：</span>
+                            <span id="shareInfoPermission"></span>
+                        </div>
+                        <div class="share-info-item">
+                            <span class="label">过期时间：</span>
+                            <span id="shareInfoExpires"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="share-actions-row">
+                        <button id="createNewShareBtn" class="btn-secondary">创建新分享</button>
+                        <button id="closeShareBtn" class="btn-primary">完成</button>
+                    </div>
+                </div>
+                
+                <!-- Existing Shares List -->
+                <div id="existingShares" class="existing-shares">
+                    <h4>已有的分享</h4>
+                    <div id="sharesList" class="shares-list"></div>
+                </div>
             </div>
         </div>
     </div>

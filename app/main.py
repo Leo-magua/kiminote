@@ -47,7 +47,10 @@ from app.config import APP_NAME, APP_VERSION, EXPORTS_DIR, SESSION_COOKIE_NAME
 from app.database import (
     get_db, create_note, get_note, get_notes, update_note, 
     delete_note, get_all_notes_for_export, get_notes_count, get_all_tags,
-    create_user, get_user_by_username, get_user_by_email
+    create_user, get_user_by_username, get_user_by_email,
+    create_share, get_share_by_token, get_shares_by_note, get_all_user_shares,
+    verify_share_password, increment_share_access_count, update_share, delete_share,
+    Share, get_notes_statistics, get_daily_writing_stats
 )
 from app.auth import (
     get_password_hash, authenticate_user, create_user_session,
@@ -87,6 +90,7 @@ app = FastAPI(
     openapi_tags=[
         {"name": "Authentication", "description": "用户注册、登录、登出等认证操作"},
         {"name": "Notes", "description": "笔记的增删改查操作"},
+        {"name": "Shares", "description": "笔记分享功能（创建分享、访问分享、管理分享）"},
         {"name": "AI Features", "description": "AI 驱动的智能功能（摘要、标签、搜索、增强）"},
         {"name": "Export", "description": "数据导出功能"},
         {"name": "Utilities", "description": "工具类接口（统计、标签列表、预览等）"},
@@ -305,6 +309,47 @@ async def api_get_all_tags(
 ):
     """Get all unique tags for current user"""
     return {"tags": get_all_tags(db, user_id=current_user["id"])}
+
+
+@app.get(
+    "/api/stats/detailed",
+    response_model=schemas.DetailedStatsResponse,
+    tags=["Utilities"],
+    summary="获取详细统计数据",
+    description="""
+    获取用户的详细写作统计数据，包括：
+    
+    - 笔记数量统计（总数、本周、本月）
+    - 字数统计（总词数、总字符数、平均值）
+    - 写作习惯分析（24小时分布、星期分布）
+    - 连续写作天数（streak）
+    - 最近30天活动记录
+    """
+)
+async def get_detailed_stats(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get detailed writing statistics for current user"""
+    stats = get_notes_statistics(db, user_id=current_user["id"])
+    return stats
+
+
+@app.get(
+    "/api/stats/daily",
+    response_model=schemas.DailyStatsResponse,
+    tags=["Utilities"],
+    summary="获取每日统计",
+    description="获取指定天数内的每日写作统计数据。"
+)
+async def get_daily_stats(
+    days: int = Query(7, ge=1, le=90, description="统计天数（1-90天）"),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get daily writing statistics for the specified number of days"""
+    stats = get_daily_writing_stats(db, user_id=current_user["id"], days=days)
+    return {"days": days, "stats": stats}
 
 
 # ============== Notes CRUD API ==============
@@ -863,6 +908,432 @@ async def preview_markdown(
     html = md_converter.convert(content)
     
     return {"html": html}
+
+
+# ============== Share API ==============
+
+@app.post(
+    "/api/shares",
+    response_model=schemas.ShareResponse,
+    tags=["Shares"],
+    summary="创建笔记分享",
+    description="""
+    为指定笔记创建分享链接。
+    
+    - 每个笔记可以有多个分享链接
+    - 支持公开、密码保护、私密三种权限
+    - 可选设置过期时间
+    - 返回8位短链接 token
+    """,
+    responses={
+        200: {"description": "分享创建成功", "model": schemas.ShareResponse},
+        400: {"description": "参数错误", "model": schemas.ErrorResponse},
+        401: {"description": "未认证", "model": schemas.ErrorResponse},
+        404: {"description": "笔记不存在", "model": schemas.ErrorResponse},
+    }
+)
+async def create_note_share(
+    share_data: schemas.ShareCreateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a share link for a note"""
+    # Check if note exists and belongs to current user
+    note = get_note(db, share_data.note_id, user_id=current_user["id"])
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    # Validate permission
+    if share_data.permission not in ["public", "password", "private"]:
+        raise HTTPException(status_code=400, detail="Invalid permission type")
+    
+    # Check password requirement
+    if share_data.permission == "password" and not share_data.password:
+        raise HTTPException(status_code=400, detail="Password required for password-protected shares")
+    
+    # Create share
+    share = create_share(
+        db,
+        note_id=share_data.note_id,
+        user_id=current_user["id"],
+        permission=share_data.permission,
+        password=share_data.password,
+        expires_days=share_data.expires_days
+    )
+    
+    # Build share URL
+    base_url = str(request.base_url).rstrip('/')
+    share_url = f"{base_url}/s/{share.share_token}"
+    
+    result = share.to_dict()
+    result["share_url"] = share_url
+    return result
+
+
+@app.get(
+    "/api/shares",
+    response_model=schemas.ShareListResponse,
+    tags=["Shares"],
+    summary="获取用户的所有分享",
+    description="获取当前用户创建的所有分享链接列表。"
+)
+async def list_user_shares(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """List all shares created by current user"""
+    shares = get_all_user_shares(db, user_id=current_user["id"])
+    
+    base_url = str(request.base_url).rstrip('/')
+    result = []
+    for share in shares:
+        share_dict = share.to_dict()
+        share_dict["share_url"] = f"{base_url}/s/{share.share_token}"
+        # Add note title
+        note = get_note(db, share.note_id)
+        if note:
+            share_dict["note_title"] = note.title
+        result.append(share_dict)
+    
+    return {"shares": result, "total": len(result)}
+
+
+@app.get(
+    "/api/shares/note/{note_id}",
+    response_model=schemas.ShareListResponse,
+    tags=["Shares"],
+    summary="获取笔记的所有分享",
+    description="获取指定笔记的所有分享链接列表。"
+)
+async def list_note_shares(
+    note_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """List all shares for a specific note"""
+    # Check if note exists and belongs to current user
+    note = get_note(db, note_id, user_id=current_user["id"])
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    shares = get_shares_by_note(db, note_id=note_id, user_id=current_user["id"])
+    
+    base_url = str(request.base_url).rstrip('/')
+    result = []
+    for share in shares:
+        share_dict = share.to_dict()
+        share_dict["share_url"] = f"{base_url}/s/{share.share_token}"
+        share_dict["note_title"] = note.title
+        result.append(share_dict)
+    
+    return {"shares": result, "total": len(result)}
+
+
+@app.get(
+    "/api/shares/{share_token}",
+    response_model=schemas.ShareResponse,
+    tags=["Shares"],
+    summary="获取分享详情",
+    description="获取分享链接的详细信息（仅创建者可查看）。"
+)
+async def get_share_info(
+    share_token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get share details (owner only)"""
+    share = get_share_by_token(db, share_token)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    # Only owner can view share details
+    if share.user_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    base_url = str(request.base_url).rstrip('/')
+    result = share.to_dict()
+    result["share_url"] = f"{base_url}/s/{share.share_token}"
+    
+    # Add note title
+    note = get_note(db, share.note_id)
+    if note:
+        result["note_title"] = note.title
+    
+    return result
+
+
+@app.put(
+    "/api/shares/{share_token}",
+    response_model=schemas.ShareResponse,
+    tags=["Shares"],
+    summary="更新分享设置",
+    description="更新分享链接的权限、密码、过期时间等设置。"
+)
+async def update_share_settings(
+    share_token: str,
+    update_data: schemas.ShareUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update share settings (owner only)"""
+    share = get_share_by_token(db, share_token)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    # Only owner can update
+    if share.user_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Prepare update kwargs
+    kwargs = {}
+    if update_data.permission is not None:
+        if update_data.permission not in ["public", "password", "private"]:
+            raise HTTPException(status_code=400, detail="Invalid permission type")
+        kwargs["permission"] = update_data.permission
+    
+    if update_data.is_active is not None:
+        kwargs["is_active"] = update_data.is_active
+    
+    if update_data.password is not None:
+        kwargs["password"] = update_data.password
+    
+    if update_data.expires_days is not None:
+        from datetime import datetime, timedelta
+        kwargs["expires_at"] = datetime.utcnow() + timedelta(days=update_data.expires_days)
+    
+    updated_share = update_share(db, share_token, current_user["id"], **kwargs)
+    
+    base_url = str(request.base_url).rstrip('/')
+    result = updated_share.to_dict()
+    result["share_url"] = f"{base_url}/s/{updated_share.share_token}"
+    
+    # Add note title
+    note = get_note(db, updated_share.note_id)
+    if note:
+        result["note_title"] = note.title
+    
+    return result
+
+
+@app.delete(
+    "/api/shares/{share_token}",
+    response_model=schemas.MessageResponse,
+    tags=["Shares"],
+    summary="删除分享链接",
+    description="删除指定的分享链接。"
+)
+async def delete_share_link(
+    share_token: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a share link (owner only)"""
+    share = get_share_by_token(db, share_token)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    # Only owner can delete
+    if share.user_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    success = delete_share(db, share_token, current_user["id"])
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete share")
+    
+    return {"message": "Share deleted successfully"}
+
+
+@app.post(
+    "/api/shares/{share_token}/verify",
+    response_model=schemas.ShareVerifyResponse,
+    tags=["Shares"],
+    summary="验证分享密码",
+    description="验证密码保护的分享链接。"
+)
+async def verify_share(
+    share_token: str,
+    verify_data: schemas.ShareVerifyRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Verify password for a protected share"""
+    share = get_share_by_token(db, share_token)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    # Check if share is valid
+    if not share.is_valid():
+        raise HTTPException(status_code=403, detail="Share link is expired or inactive")
+    
+    # Check if password is required
+    if share.permission != "password":
+        return {
+            "valid": True,
+            "message": "No password required",
+            "share_url": f"/s/{share_token}"
+        }
+    
+    # Verify password
+    if verify_share_password(db, share_token, verify_data.password):
+        return {
+            "valid": True,
+            "message": "Password verified",
+            "share_url": f"/s/{share_token}?verified=true"
+        }
+    else:
+        return {
+            "valid": False,
+            "message": "Invalid password",
+            "share_url": None
+        }
+
+
+@app.get(
+    "/api/shares/{share_token}/access",
+    response_model=schemas.ShareNoteResponse,
+    tags=["Shares"],
+    summary="通过分享访问笔记内容",
+    description="通过分享链接访问笔记内容，无需登录。"
+)
+async def access_shared_note(
+    share_token: str,
+    password: str = Query(None, description="访问密码（密码保护时需要）"),
+    verified: bool = Query(False, description="是否已通过密码验证"),
+    db: Session = Depends(get_db)
+):
+    """Access note through share link (no authentication required)"""
+    share = get_share_by_token(db, share_token)
+    if not share:
+        raise HTTPException(status_code=404, detail="Share not found")
+    
+    # Check if share is valid
+    if not share.is_valid():
+        raise HTTPException(status_code=403, detail="Share link is expired or inactive")
+    
+    # Check permission
+    if share.permission == "private":
+        raise HTTPException(status_code=403, detail="This share is private")
+    
+    # Check password if required
+    if share.permission == "password":
+        if not verified and not password:
+            raise HTTPException(status_code=401, detail="Password required")
+        if password and not verify_share_password(db, share_token, password):
+            raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Get note
+    note = get_note(db, share.note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    
+    # Increment access count
+    increment_share_access_count(db, share_token)
+    
+    return {
+        "note": note.to_dict(),
+        "share_token": share_token,
+        "permission": share.permission,
+        "access_count": share.access_count + 1
+    }
+
+
+# ============== Share Web Routes ==============
+
+@app.get("/s/{share_token}", response_class=HTMLResponse, tags=["Web"], include_in_schema=False)
+async def share_page(
+    share_token: str,
+    request: Request,
+    password: str = Query(None, description="访问密码"),
+    verified: bool = Query(False, description="是否已验证"),
+    db: Session = Depends(get_db)
+):
+    """Share page - displays shared note without login"""
+    share = get_share_by_token(db, share_token)
+    if not share:
+        return templates.TemplateResponse("share.html", {
+            "request": request,
+            "app_name": APP_NAME,
+            "error": "分享链接不存在或已过期",
+            "require_password": False,
+            "share_token": share_token
+        })
+    
+    # Check if share is valid
+    if not share.is_valid():
+        return templates.TemplateResponse("share.html", {
+            "request": request,
+            "app_name": APP_NAME,
+            "error": "分享链接已过期或被禁用",
+            "require_password": False,
+            "share_token": share_token
+        })
+    
+    # Check permission
+    if share.permission == "private":
+        return templates.TemplateResponse("share.html", {
+            "request": request,
+            "app_name": APP_NAME,
+            "error": "此分享为私密分享，无法访问",
+            "require_password": False,
+            "share_token": share_token
+        })
+    
+    # Check password if required
+    if share.permission == "password" and not verified:
+        # If password provided, verify it
+        if password:
+            if not verify_share_password(db, share_token, password):
+                return templates.TemplateResponse("share.html", {
+                    "request": request,
+                    "app_name": APP_NAME,
+                    "error": "密码错误，请重试",
+                    "require_password": True,
+                    "share_token": share_token
+                })
+        else:
+            # Show password form
+            return templates.TemplateResponse("share.html", {
+                "request": request,
+                "app_name": APP_NAME,
+                "error": None,
+                "require_password": True,
+                "share_token": share_token
+            })
+    
+    # Get note
+    note = get_note(db, share.note_id)
+    if not note:
+        return templates.TemplateResponse("share.html", {
+            "request": request,
+            "app_name": APP_NAME,
+            "error": "笔记不存在或已被删除",
+            "require_password": False,
+            "share_token": share_token
+        })
+    
+    # Increment access count
+    increment_share_access_count(db, share_token)
+    
+    # Convert markdown to HTML
+    md_converter.reset()
+    html_content = md_converter.convert(note.content)
+    
+    return templates.TemplateResponse("share.html", {
+        "request": request,
+        "app_name": APP_NAME,
+        "note": note,
+        "note_dict": note.to_dict(),
+        "html_content": html_content,
+        "share_token": share_token,
+        "access_count": share.access_count + 1,
+        "error": None,
+        "require_password": False
+    })
 
 
 if __name__ == "__main__":

@@ -71,6 +71,7 @@ let allNotes = [];
 let allTags = [];
 let currentTagFilter = null;
 let isAiAvailable = false;
+let currentShares = [];
 
 // DOM Elements
 const elements = {
@@ -127,7 +128,26 @@ const elements = {
     modalCloseBtns: document.querySelectorAll('.modal-close'),
     
     // Toast
-    toast: document.getElementById('toast')
+    toast: document.getElementById('toast'),
+    
+    // Share Modal
+    shareModal: document.getElementById('shareModal'),
+    sharePermission: document.getElementById('sharePermission'),
+    sharePassword: document.getElementById('sharePassword'),
+    shareExpires: document.getElementById('shareExpires'),
+    passwordGroup: document.getElementById('passwordGroup'),
+    createShareBtn: document.getElementById('createShareBtn'),
+    createShareForm: document.getElementById('createShareForm'),
+    shareResult: document.getElementById('shareResult'),
+    shareUrlInput: document.getElementById('shareUrlInput'),
+    copyShareUrlBtn: document.getElementById('copyShareUrlBtn'),
+    createNewShareBtn: document.getElementById('createNewShareBtn'),
+    closeShareBtn: document.getElementById('closeShareBtn'),
+    shareInfoPermission: document.getElementById('shareInfoPermission'),
+    shareInfoExpires: document.getElementById('shareInfoExpires'),
+    existingShares: document.getElementById('existingShares'),
+    sharesList: document.getElementById('sharesList'),
+    shareBtn: document.getElementById('shareBtn')
 };
 
 // API Helper
