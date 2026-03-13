@@ -153,11 +153,11 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[dic
 def create_user_session(db: Session, user_id: int, ip_address: str = None, user_agent: str = None) -> str:
     """Create a new session for a user and return the token"""
     # Create session in database
-    db_session = create_session(db, user_id=user_id, ip_address=ip_address, user_agent=user_agent)
+    session_id = create_session(db, user_id=user_id, ip_address=ip_address, user_agent=user_agent)
     
     # Create JWT token
     access_token = create_access_token(
-        data={"sub": str(user_id), "session_id": db_session.session_id}
+        data={"sub": str(user_id), "session_id": session_id}
     )
     
     return access_token

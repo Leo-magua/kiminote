@@ -31,6 +31,16 @@ class User(Base):
     # Relationships
     notes = relationship("Note", back_populates="user")
     shares = relationship("Share", back_populates="owner")
+    
+    def to_dict(self) -> dict:
+        """Convert user to dictionary"""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
 
 
 class Note(Base):

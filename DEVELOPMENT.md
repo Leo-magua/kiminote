@@ -209,6 +209,35 @@
 ---
 
 ## 📈 开发日志
+### 2026-03-13 - 协作功能验证与完善
+- ✅ **验证并完善协作功能**
+  - **后端 API 验证**：
+    - `GET /api/notes/{id}/versions` - 版本历史 API 正常工作
+    - `GET /api/notes/{id}/versions/{version_id}` - 特定版本详情 API 正常
+    - `POST /api/notes/{id}/versions/{version_id}/restore` - 版本恢复 API 正常
+    - `GET /api/notes/{id}/collaborators` - 协作者列表 API 正常
+    - `POST /api/notes/{id}/collaborators` - 添加协作者 API 正常
+    - `DELETE /api/notes/{id}/collaborators/{user_id}` - 移除协作者 API 正常
+    - `POST /api/notes/{id}/conflict/detect` - 冲突检测 API 正常
+    - `POST /api/notes/{id}/conflict/resolve` - 冲突解决 API 正常
+    - `WS /ws/collaborate/{note_id}` - WebSocket 实时协作连接正常
+  
+  - **Bug 修复**：
+    - 修复 `User` 模型缺少 `to_dict()` 方法的问题
+    - 修复 `create_user_session` 中 session 对象访问问题
+    - 重新创建数据库表结构以支持 `current_version` 字段
+  
+  - **功能测试**：
+    - 用户注册/登录流程测试通过
+    - 笔记 CRUD 操作测试通过
+    - 版本历史自动创建测试通过
+    - WebSocket 连接、消息收发测试通过
+    - 冲突检测逻辑测试通过
+  
+  - **文档更新**：
+    - 更新 README.md 协作功能使用说明
+    - 补充详细的权限说明（只读/读写/管理员）
+
 ### 2026-03-13 - 富文本编辑器完整实现
 - ✅ **添加完整的富文本编辑器功能**
   - **后端实现**：
