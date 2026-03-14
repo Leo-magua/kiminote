@@ -319,12 +319,12 @@ print("Hello World")
   - Typography 扩展：排版优化
   - HorizontalRule 扩展：水平分隔线
 - **Markdown 转换**: Turndown.js (HTML→Markdown) + Marked.js (Markdown→HTML)
-- **Markdown 转换**: Turndown.js (HTML to Markdown) + Marked.js (Markdown to HTML)
 - **代码高亮**: highlight.js + lowlight (TipTap 集成)
 - **AI 集成**: OpenAI API
 - **Markdown 解析**: Marked.js (前端) + Python-Markdown (后端)
 - **实时协作**: WebSocket + Operational Transformation
-- **代码高亮**: highlight.js
+- **认证**: JWT + HTTP-only Cookie
+- **文件上传**: 支持图片和附件上传
 
 ## 🔌 API 接口
 
