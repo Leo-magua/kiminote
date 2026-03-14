@@ -26,10 +26,20 @@ class RichTextEditor {
             return;
         }
 
-        // Check if TipTap is available (from CDN)
-        if (typeof window.tiptap === 'undefined') {
-            console.warn('TipTap not loaded yet, will retry...');
-            setTimeout(() => this.init(), 100);
+        // Check if all required TipTap extensions are available (from CDN)
+        const requiredLibs = [
+            'tiptap', 'tiptapStarterKit', 'tiptapImage', 'tiptapTable',
+            'tiptapTableRow', 'tiptapTableCell', 'tiptapTableHeader',
+            'tiptapLink', 'tiptapTaskList', 'tiptapTaskItem', 
+            'tiptapHighlight', 'tiptapTypography', 'tiptapHorizontalRule',
+            'tiptapPlaceholder'
+        ];
+        
+        const missingLibs = requiredLibs.filter(lib => typeof window[lib] === 'undefined');
+        
+        if (missingLibs.length > 0) {
+            console.warn(`TipTap libraries not fully loaded yet (missing: ${missingLibs.join(', ')}), will retry...`);
+            setTimeout(() => this.init(), 200);
             return;
         }
 
