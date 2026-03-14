@@ -133,6 +133,7 @@ ai_notes_project/
 │   ├── auth.py            # 认证相关功能
 │   ├── ai_service.py      # AI 服务集成
 │   ├── schemas.py         # Pydantic 数据模型
+│   ├── websocket.py       # WebSocket 实时协作
 │   └── config.py          # 配置管理
 ├── static/                # 静态文件
 │   ├── css/
