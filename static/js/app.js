@@ -457,6 +457,107 @@ function filterNotes() {
     renderNotes(filtered);
 }
 
+// ========== Table Context Menu ==========
+
+// Setup table context menu
+function setupTableContextMenu() {
+    const editor = document.getElementById('editor');
+    if (!editor) return;
+    
+    // Create context menu element
+    let contextMenu = document.getElementById('tableContextMenu');
+    if (!contextMenu) {
+        contextMenu = document.createElement('div');
+        contextMenu.id = 'tableContextMenu';
+        contextMenu.className = 'table-context-menu hidden';
+        contextMenu.innerHTML = `
+            <div class="context-menu-item" data-action="addRowBefore">在上方添加行</div>
+            <div class="context-menu-item" data-action="addRowAfter">在下方添加行</div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="addColumnBefore">在左侧添加列</div>
+            <div class="context-menu-item" data-action="addColumnAfter">在右侧添加列</div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="deleteRow">删除当前行</div>
+            <div class="context-menu-item" data-action="deleteColumn">删除当前列</div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="toggleHeader">切换表头</div>
+            <div class="context-menu-item danger" data-action="deleteTable">删除表格</div>
+        `;
+        document.body.appendChild(contextMenu);
+        
+        // Add click handlers
+        contextMenu.querySelectorAll('.context-menu-item').forEach(item => {
+            item.addEventListener('click', handleTableContextMenuAction);
+        });
+    }
+    
+    // Show context menu on right-click in table
+    editor.addEventListener('contextmenu', (e) => {
+        const cell = e.target.closest('td, th');
+        if (cell && richTextEditor && richTextEditor.isInTable()) {
+            e.preventDefault();
+            showTableContextMenu(e.clientX, e.clientY);
+        }
+    });
+    
+    // Hide context menu on click elsewhere
+    document.addEventListener('click', (e) => {
+        if (!contextMenu.contains(e.target)) {
+            contextMenu.classList.add('hidden');
+        }
+    });
+}
+
+// Show table context menu
+function showTableContextMenu(x, y) {
+    const menu = document.getElementById('tableContextMenu');
+    if (!menu) return;
+    
+    // Position menu
+    const rect = document.documentElement.getBoundingClientRect();
+    menu.style.left = Math.min(x, rect.width - 200) + 'px';
+    menu.style.top = Math.min(y, rect.height - 250) + 'px';
+    menu.classList.remove('hidden');
+}
+
+// Handle table context menu action
+function handleTableContextMenuAction(e) {
+    const action = e.target.dataset.action;
+    if (!action || !richTextEditor) return;
+    
+    switch (action) {
+        case 'addRowBefore':
+            richTextEditor.addTableRow('before');
+            break;
+        case 'addRowAfter':
+            richTextEditor.addTableRow('after');
+            break;
+        case 'addColumnBefore':
+            richTextEditor.addTableColumn('before');
+            break;
+        case 'addColumnAfter':
+            richTextEditor.addTableColumn('after');
+            break;
+        case 'deleteRow':
+            richTextEditor.deleteTableRow();
+            break;
+        case 'deleteColumn':
+            richTextEditor.deleteTableColumn();
+            break;
+        case 'toggleHeader':
+            richTextEditor.toggleTableHeader();
+            break;
+        case 'deleteTable':
+            if (confirm('确定要删除此表格吗？')) {
+                richTextEditor.deleteTable();
+            }
+            break;
+    }
+    
+    // Hide menu
+    document.getElementById('tableContextMenu').classList.add('hidden');
+}
+
 // ========== Editor Functions ==========
 
 // Initialize Rich Text Editor
@@ -486,6 +587,9 @@ function initRichTextEditor() {
     });
     
     isEditorReady = true;
+    
+    // Setup table context menu
+    setupTableContextMenu();
 }
 
 // Upload image
@@ -670,12 +774,36 @@ async function openVersionsModal() {
 // Open note for editing
 async function openNote(id) {
     try {
+        // Disable auto-save for previous note
+        if (richTextEditor) {
+            richTextEditor.disableAutoSave();
+        }
+        
         currentNote = await api.get(`/api/notes/${id}`);
         
         elements.noteTitle.value = currentNote.title;
         
-        // Set content to editor
-        setEditorContent(currentNote.content);
+        // Check for auto-saved data
+        if (richTextEditor && richTextEditor.hasAutoSavedData(currentNote.id)) {
+            const autoSaveData = richTextEditor.getAutoSavedData(currentNote.id);
+            const savedTime = new Date(autoSaveData.timestamp).toLocaleString('zh-CN');
+            
+            if (confirm(`检测到未保存的编辑内容（${savedTime}）\n是否恢复？`)) {
+                richTextEditor.restoreFromAutoSave(currentNote.id);
+            } else {
+                // Set content from server
+                setEditorContent(currentNote.content);
+                richTextEditor.clearAutoSave(currentNote.id);
+            }
+        } else {
+            // Set content to editor
+            setEditorContent(currentNote.content);
+        }
+        
+        // Enable auto-save for this note
+        if (richTextEditor) {
+            richTextEditor.enableAutoSave(currentNote.id);
+        }
         
         // Load attachments
         await renderAttachmentList();
@@ -723,6 +851,11 @@ function renderNoteMeta() {
 
 // Create new note
 async function createNewNote() {
+    // Disable auto-save for previous note
+    if (richTextEditor) {
+        richTextEditor.disableAutoSave();
+    }
+    
     currentNote = null;
     currentAttachments = [];
     elements.noteTitle.value = '';
@@ -771,6 +904,11 @@ async function saveNote() {
             // Update attachment associations
             await updateNoteAttachments(currentNote.id);
             
+            // Clear auto-save data
+            if (richTextEditor) {
+                richTextEditor.clearAutoSave(currentNote.id);
+            }
+            
             showToast('笔记已更新');
         } else {
             // Create new
@@ -779,6 +917,11 @@ async function saveNote() {
             
             // Update attachment associations
             await updateNoteAttachments(currentNote.id);
+            
+            // Enable auto-save for the new note
+            if (richTextEditor) {
+                richTextEditor.enableAutoSave(currentNote.id);
+            }
             
             showToast('笔记已创建');
             

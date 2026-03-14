@@ -382,6 +382,56 @@ class RichTextEditor {
         this.editor.chain().focus().insertTable({ rows, cols, withHeaderRow }).run();
     }
 
+    // Add table column
+    addTableColumn(position = 'after') {
+        if (!this.editor) return;
+        if (position === 'before') {
+            this.editor.chain().focus().addColumnBefore().run();
+        } else {
+            this.editor.chain().focus().addColumnAfter().run();
+        }
+    }
+
+    // Delete table column
+    deleteTableColumn() {
+        if (!this.editor) return;
+        this.editor.chain().focus().deleteColumn().run();
+    }
+
+    // Add table row
+    addTableRow(position = 'after') {
+        if (!this.editor) return;
+        if (position === 'before') {
+            this.editor.chain().focus().addRowBefore().run();
+        } else {
+            this.editor.chain().focus().addRowAfter().run();
+        }
+    }
+
+    // Delete table row
+    deleteTableRow() {
+        if (!this.editor) return;
+        this.editor.chain().focus().deleteRow().run();
+    }
+
+    // Delete entire table
+    deleteTable() {
+        if (!this.editor) return;
+        this.editor.chain().focus().deleteTable().run();
+    }
+
+    // Toggle table header
+    toggleTableHeader() {
+        if (!this.editor) return;
+        this.editor.chain().focus().toggleHeaderRow().run();
+    }
+
+    // Check if currently in a table
+    isInTable() {
+        if (!this.editor) return false;
+        return this.editor.isActive('table');
+    }
+
     // Attachment handling
     promptAttachment() {
         const modal = document.getElementById('attachmentUploadModal');
@@ -706,6 +756,89 @@ class RichTextEditor {
         }
         this.editor = null;
         this.isInitialized = false;
+    }
+
+    // Auto-save to localStorage
+    enableAutoSave(noteId, interval = 30000) {
+        if (!noteId) return;
+        
+        this.autoSaveKey = `autosave_${noteId}`;
+        this.autoSaveInterval = setInterval(() => {
+            if (this.editor && this.isInitialized) {
+                const content = this.getHTML();
+                const title = document.getElementById('noteTitle')?.value || '';
+                const data = {
+                    content,
+                    title,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(this.autoSaveKey, JSON.stringify(data));
+            }
+        }, interval);
+    }
+
+    // Disable auto-save
+    disableAutoSave() {
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+            this.autoSaveInterval = null;
+        }
+    }
+
+    // Clear auto-saved data
+    clearAutoSave(noteId) {
+        if (noteId) {
+            localStorage.removeItem(`autosave_${noteId}`);
+        } else if (this.autoSaveKey) {
+            localStorage.removeItem(this.autoSaveKey);
+        }
+    }
+
+    // Get auto-saved data
+    getAutoSavedData(noteId) {
+        const key = noteId ? `autosave_${noteId}` : this.autoSaveKey;
+        if (!key) return null;
+        
+        const data = localStorage.getItem(key);
+        if (data) {
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    // Check if there's auto-saved data
+    hasAutoSavedData(noteId) {
+        return this.getAutoSavedData(noteId) !== null;
+    }
+
+    // Restore from auto-save
+    restoreFromAutoSave(noteId) {
+        const data = this.getAutoSavedData(noteId);
+        if (data && data.content) {
+            this.setHTML(data.content);
+            if (data.title && document.getElementById('noteTitle')) {
+                document.getElementById('noteTitle').value = data.title;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // Get word count
+    getWordCount() {
+        if (!this.editor) return 0;
+        const text = this.editor.state.doc.textContent;
+        return text.split(/\s+/).filter(word => word.length > 0).length;
+    }
+
+    // Get character count
+    getCharacterCount() {
+        if (!this.editor) return 0;
+        return this.editor.state.doc.textContent.length;
     }
 
     // Check if editor is ready
