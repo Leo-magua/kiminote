@@ -81,8 +81,63 @@ let currentAttachments = [];
 let isEditorReady = false;
 let currentTab = 'edit'; // 'edit', 'preview', 'markdown'
 
+// Auto-save indicator timeout
+let autoSaveTimeout = null;
+
 // Turndown instance for HTML to Markdown conversion
 let turndownService = null;
+
+// Editor stats elements
+const statsElements = {
+    wordCount: null,
+    charCount: null,
+    autoSaveIndicator: null
+};
+
+// Initialize stats elements
+function initStatsElements() {
+    statsElements.wordCount = document.getElementById('wordCount');
+    statsElements.charCount = document.getElementById('charCount');
+    statsElements.autoSaveIndicator = document.getElementById('autoSaveIndicator');
+}
+
+// Update editor stats display
+function updateEditorStats(event) {
+    if (event.detail) {
+        if (statsElements.wordCount) {
+            statsElements.wordCount.textContent = event.detail.wordCount || 0;
+        }
+        if (statsElements.charCount) {
+            statsElements.charCount.textContent = event.detail.charCount || 0;
+        }
+    }
+}
+
+// Show auto-save status
+function showAutoSaveStatus(status) {
+    if (!statsElements.autoSaveIndicator) return;
+    
+    const indicator = statsElements.autoSaveIndicator;
+    indicator.classList.remove('saving', 'saved');
+    
+    if (status === 'saving') {
+        indicator.textContent = '保存中...';
+        indicator.classList.add('saving');
+    } else if (status === 'saved') {
+        indicator.textContent = '已保存';
+        indicator.classList.add('saved');
+        
+        // Clear saved status after 3 seconds
+        if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            indicator.textContent = '';
+            indicator.classList.remove('saved');
+        }, 3000);
+    }
+}
+
+// Listen for editor stats updates
+document.addEventListener('editorStatsUpdate', updateEditorStats);
 
 // DOM Elements
 const elements = {
@@ -895,6 +950,8 @@ async function saveNote() {
         return;
     }
     
+    showAutoSaveStatus('saving');
+    
     try {
         if (currentNote) {
             // Update existing
@@ -910,6 +967,7 @@ async function saveNote() {
             }
             
             showToast('笔记已更新');
+            showAutoSaveStatus('saved');
         } else {
             // Create new
             const result = await api.post('/api/notes', { title, content });
@@ -924,6 +982,7 @@ async function saveNote() {
             }
             
             showToast('笔记已创建');
+            showAutoSaveStatus('saved');
             
             // Show share button after creation
             elements.shareBtn.style.display = 'inline-block';
@@ -1860,6 +1919,9 @@ document.addEventListener('keydown', (e) => {
 
 // Initialize
 async function init() {
+    // Initialize stats elements
+    initStatsElements();
+    
     await checkAiStatus();
     await loadNotes();
     await loadTags();

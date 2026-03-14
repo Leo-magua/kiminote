@@ -116,6 +116,7 @@ class RichTextEditor {
                     this.onChange(html);
                     this.updateToolbarState();
                     this.saveToHistory(html);
+                    this.updateStats();
                 },
                 onSelectionUpdate: () => {
                     this.updateToolbarState();
@@ -677,6 +678,18 @@ class RichTextEditor {
             }
         }
         return '';
+    }
+
+    // Update word and character count display
+    updateStats() {
+        const wordCount = this.getWordCount();
+        const charCount = this.getCharacterCount();
+        
+        // Dispatch custom event for stats update
+        const event = new CustomEvent('editorStatsUpdate', { 
+            detail: { wordCount, charCount }
+        });
+        document.dispatchEvent(event);
     }
 
     getMarkdown() {

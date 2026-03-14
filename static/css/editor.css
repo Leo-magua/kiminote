@@ -678,6 +678,55 @@
     font-size: 14px;
 }
 
+/* Editor Stats Bar */
+.editor-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: -16px;
+    margin-bottom: 16px;
+}
+
+.editor-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.editor-stat .stat-label {
+    color: var(--text-muted);
+}
+
+.editor-stat .stat-value {
+    color: var(--text-secondary);
+    font-weight: 500;
+    min-width: 30px;
+}
+
+.editor-stat.auto-save-status {
+    margin-left: auto;
+    font-style: italic;
+}
+
+.autosave-text {
+    transition: all 0.3s;
+}
+
+.autosave-text.saving {
+    color: var(--primary);
+}
+
+.autosave-text.saved {
+    color: var(--success);
+}
+
 /* Print styles */
 @media print {
     .editor-toolbar {
@@ -691,7 +740,8 @@
     
     .table-context-menu,
     .editor-stats,
-    .autosave-indicator {
+    .autosave-indicator,
+    .editor-stats-bar {
         display: none;
     }
 }
