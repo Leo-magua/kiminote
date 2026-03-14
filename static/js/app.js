@@ -1586,6 +1586,11 @@ elements.smartSearchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') performSmartSearch();
 });
 
+// Preview button
+elements.previewBtn.addEventListener('click', () => {
+    switchTab('preview');
+});
+
 // AI enhance
 elements.aiEnhanceBtn.addEventListener('click', () => {
     elements.enhanceResult.classList.remove('show');
