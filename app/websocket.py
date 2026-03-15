@@ -13,7 +13,8 @@ from app.database import (
     create_collaboration_session, get_collaboration_session,
     update_collaboration_session, deactivate_collaboration_session,
     get_active_collaborators, create_note_version,
-    check_collaborator_permission, is_note_owner_or_collaborator
+    check_collaborator_permission, is_note_owner_or_collaborator,
+    NoteCollaborator, CollaborationSession
 )
 from app.auth import get_token_from_request, decode_token
 
