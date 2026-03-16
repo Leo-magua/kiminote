@@ -50,9 +50,11 @@
     color: white;
 }
 
-.toolbar-btn:disabled {
+.toolbar-btn:disabled,
+.toolbar-btn.disabled {
     opacity: 0.4;
     cursor: not-allowed;
+    pointer-events: none;
 }
 
 .toolbar-btn svg {

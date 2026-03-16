@@ -292,11 +292,21 @@ class RichTextEditor {
             btn.classList.toggle('active', active);
         });
 
-        // Update undo/redo state
+        // Update undo/redo state with visual feedback
         const undoBtn = document.querySelector('.toolbar-btn[data-command="undo"]');
         const redoBtn = document.querySelector('.toolbar-btn[data-command="redo"]');
-        if (undoBtn) undoBtn.disabled = !editor.can().undo();
-        if (redoBtn) redoBtn.disabled = !editor.can().redo();
+        if (undoBtn) {
+            undoBtn.disabled = !editor.can().undo();
+            undoBtn.classList.toggle('disabled', !editor.can().undo());
+        }
+        if (redoBtn) {
+            redoBtn.disabled = !editor.can().redo();
+            redoBtn.classList.toggle('disabled', !editor.can().redo());
+        }
+        
+        // Update title/tooltip with keyboard shortcuts
+        if (undoBtn) undoBtn.title = `撤销 (Ctrl+Z)`;
+        if (redoBtn) redoBtn.title = `重做 (Ctrl+Y)`;
     }
 
     // Link handling
@@ -304,6 +314,30 @@ class RichTextEditor {
         if (!this.editor) return;
 
         const previousUrl = this.editor.getAttributes('link').href;
+        const linkUrlInput = document.getElementById('linkUrl');
+        const linkTextInput = document.getElementById('linkText');
+        
+        if (linkUrlInput && linkTextInput) {
+            // Use modal if available
+            linkUrlInput.value = previousUrl || 'https://';
+            linkTextInput.value = this.getSelectedText() || '';
+            
+            const modal = document.getElementById('linkInsertModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                linkUrlInput.focus();
+                linkUrlInput.select();
+            } else {
+                // Fallback to prompt
+                this.promptLinkFallback(previousUrl);
+            }
+        } else {
+            // Fallback to prompt
+            this.promptLinkFallback(previousUrl);
+        }
+    }
+
+    promptLinkFallback(previousUrl) {
         const url = window.prompt('输入链接 URL:', previousUrl || 'https://');
 
         if (url === null) return;
@@ -641,6 +675,42 @@ class RichTextEditor {
                 this.promptLink();
             }
         });
+
+        // Setup paste handler for images
+        this.element.addEventListener('paste', (e) => {
+            this.handlePaste(e);
+        });
+    }
+
+    // Handle paste event for images
+    handlePaste(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        let hasImage = false;
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            
+            // Handle image paste
+            if (item.type.indexOf('image') !== -1) {
+                hasImage = true;
+                e.preventDefault();
+                
+                const blob = item.getAsFile();
+                if (blob) {
+                    // Generate a filename if not provided
+                    const timestamp = new Date().getTime();
+                    const ext = item.type.split('/')[1] || 'png';
+                    const filename = `pasted-image-${timestamp}.${ext}`;
+                    const file = new File([blob], filename, { type: item.type });
+                    
+                    this.insertImage(file);
+                }
+            }
+        }
+
+        return !hasImage; // Return false if we handled the paste
     }
 
     // History management for custom undo/redo (in addition to TipTap's built-in)

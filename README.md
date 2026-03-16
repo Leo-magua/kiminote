@@ -922,3 +922,44 @@ Made with ❤️ using FastAPI + OpenAI
 - **冲突解决**: Operational Transformation 算法
 - **前端**: 原生 JavaScript (ES6+ Classes)
 
+
+
+---
+
+## ✅ 富文本编辑器功能增强 (2026-03-17)
+
+### 新增功能
+
+#### 图片上传增强
+- **粘贴上传** - 支持从剪贴板直接粘贴图片（截图后 Ctrl+V）
+- **拖拽上传** - 支持拖拽图片文件到编辑器区域
+- **多方式插入** - 支持本地上传、URL 插入两种方式
+
+#### 链接插入增强
+- **模态框输入** - 使用链接插入模态框，体验更友好
+- **自动检测选区** - 自动识别选中的文字作为链接文字
+- **快捷键支持** - Ctrl+K 快速打开链接插入模态框
+
+#### 撤销重做增强
+- **视觉反馈** - 工具栏按钮根据可撤销/重做状态自动更新
+- **快捷键提示** - 按钮悬停显示快捷键提示
+- **完整历史栈** - 支持最多 100 步操作历史
+
+### API 端点
+
+#### 文件上传
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/upload/image` | 上传图片（JPG/PNG/GIF/WebP/SVG，最大 10MB） |
+| POST | `/api/upload/attachment` | 上传附件（PDF/Word/Excel/PPT/TXT，最大 50MB） |
+| GET | `/api/notes/{id}/attachments` | 获取笔记附件列表 |
+| PUT | `/api/notes/{id}/attachments` | 更新笔记附件关联 |
+| DELETE | `/api/attachments/{id}` | 删除附件 |
+
+### 文件变更
+- `static/js/editor.js` - 增强编辑器功能
+- `static/css/editor.css` - 完善工具栏样式
+
+---
+
+Made with ❤️ using FastAPI + OpenAI + TipTap.js
