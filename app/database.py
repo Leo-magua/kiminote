@@ -442,7 +442,7 @@ def update_note(db: Session, note_id: int, user_id: int = None, **kwargs) -> Opt
     
     allowed_fields = ['title', 'content', 'summary', 'tags']
     for key, value in kwargs.items():
-        if key in allowed_fields:
+        if key in allowed_fields and value is not None:
             setattr(db_note, key, value)
     
     db_note.updated_at = datetime.utcnow()
