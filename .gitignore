@@ -53,3 +53,4 @@ Thumbs.db
 # Exports (keep directory, ignore files)
 exports/*
 !exports/.gitkeep
+EOF
