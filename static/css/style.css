@@ -2010,6 +2010,25 @@ button {
     text-overflow: ellipsis;
 }
 
+/* Remote Cursor Colors for different users */
+.remote-cursor.user-1 { background: #ef4444; }
+.remote-cursor.user-2 { background: #f97316; }
+.remote-cursor.user-3 { background: #f59e0b; }
+.remote-cursor.user-4 { background: #84cc16; }
+.remote-cursor.user-5 { background: #10b981; }
+.remote-cursor.user-6 { background: #06b6d4; }
+.remote-cursor.user-7 { background: #3b82f6; }
+.remote-cursor.user-8 { background: #8b5cf6; }
+
+.remote-cursor-label.user-1 { background: #ef4444; color: white; }
+.remote-cursor-label.user-2 { background: #f97316; color: white; }
+.remote-cursor-label.user-3 { background: #f59e0b; color: white; }
+.remote-cursor-label.user-4 { background: #84cc16; color: white; }
+.remote-cursor-label.user-5 { background: #10b981; color: white; }
+.remote-cursor-label.user-6 { background: #06b6d4; color: white; }
+.remote-cursor-label.user-7 { background: #3b82f6; color: white; }
+.remote-cursor-label.user-8 { background: #8b5cf6; color: white; }
+
 /* Activity Chart Styles */
 .activity-chart {
     min-height: 120px;

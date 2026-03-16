@@ -836,6 +836,9 @@ async function openNote(id) {
         
         currentNote = await api.get(`/api/notes/${id}`);
         
+        // Set base version for conflict detection
+        baseVersionNumber = currentNote.current_version;
+        
         elements.noteTitle.value = currentNote.title;
         
         // Check for auto-saved data
@@ -941,6 +944,9 @@ async function createNewNote() {
 }
 
 // Save note
+// Base version for conflict detection
+let baseVersionNumber = null;
+
 async function saveNote() {
     const title = elements.noteTitle.value.trim();
     const content = getCurrentContent().trim();
@@ -954,9 +960,38 @@ async function saveNote() {
     
     try {
         if (currentNote) {
+            // Check for conflicts before saving
+            if (baseVersionNumber !== null && window.conflictResolutionManager) {
+                try {
+                    const conflictCheck = await window.conflictResolutionManager.detectConflict(
+                        currentNote.id, 
+                        baseVersionNumber
+                    );
+                    
+                    if (conflictCheck.has_conflict) {
+                        showAutoSaveStatus('error');
+                        window.conflictResolutionManager.showConflictModal(conflictCheck, (resolvedNote) => {
+                            // Reload note after conflict resolution
+                            if (resolvedNote) {
+                                currentNote = resolvedNote;
+                                baseVersionNumber = resolvedNote.current_version;
+                                loadNotes();
+                            }
+                        });
+                        return;
+                    }
+                } catch (conflictError) {
+                    console.warn('Conflict detection failed:', conflictError);
+                    // Continue with save even if conflict detection fails
+                }
+            }
+            
             // Update existing
             const result = await api.put(`/api/notes/${currentNote.id}`, { title, content });
             currentNote = result;
+            
+            // Update base version after successful save
+            baseVersionNumber = result.current_version;
             
             // Update attachment associations
             await updateNoteAttachments(currentNote.id);
@@ -972,6 +1007,9 @@ async function saveNote() {
             // Create new
             const result = await api.post('/api/notes', { title, content });
             currentNote = result;
+            
+            // Set base version for conflict detection
+            baseVersionNumber = result.current_version;
             
             // Update attachment associations
             await updateNoteAttachments(currentNote.id);
