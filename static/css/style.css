@@ -314,6 +314,54 @@ button {
     margin-bottom: 8px;
 }
 
+/* Collaborated Notes Section */
+.collaborated-section {
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.collaborated-section h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.collaborated-count {
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+.collaborated-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.collaborated-item {
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.collaborated-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary);
+}
+
+.collaborated-title {
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
 /* Main Content */
 .main-content {
     flex: 1;
