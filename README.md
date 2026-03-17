@@ -141,7 +141,9 @@ ai_notes_project/
 │   ├── css/
 │   │   ├── style.css      # 主样式文件
 │   │   ├── auth.css       # 认证页面样式
-│   │   └── editor.css     # 富文本编辑器样式
+│   │   ├── editor.css     # 富文本编辑器样式
+│   │   ├── collaboration.css # 协作功能样式
+│   │   └── share.css      # 分享页面样式
 │   └── js/
 │       ├── app.js         # 前端逻辑
 │       ├── auth.js        # 认证相关功能
@@ -152,6 +154,8 @@ ai_notes_project/
 │   ├── login.html         # 登录页面
 │   ├── register.html      # 注册页面
 │   └── share.html         # 分享页面
+├── tests/                 # 测试文件
+│   └── test_collaboration.py # 协作功能测试
 ├── data/                  # 数据库文件（自动创建）
 ├── uploads/               # 上传文件目录
 ├── exports/               # 导出文件目录
