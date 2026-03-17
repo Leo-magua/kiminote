@@ -155,7 +155,8 @@ ai_notes_project/
 │   ├── register.html      # 注册页面
 │   └── share.html         # 分享页面
 ├── tests/                 # 测试文件
-│   └── test_collaboration.py # 协作功能测试
+│   ├── test_collaboration.py # 协作功能测试
+│   └── test_rich_text_editor.py # 富文本编辑器测试
 ├── data/                  # 数据库文件（自动创建）
 ├── uploads/               # 上传文件目录
 ├── exports/               # 导出文件目录

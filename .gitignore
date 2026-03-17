@@ -54,3 +54,5 @@ Thumbs.db
 exports/*
 !exports/.gitkeep
 EOF
+uploads/*
+!uploads/.gitkeep
