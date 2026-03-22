@@ -3,7 +3,7 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-20 10:00
+> 最后更新：2026-03-22 19:30
 
 ---
 
@@ -362,6 +362,15 @@ open http://localhost:8000
 ---
 
 ## 📝 开发日志
+
+### 2026-03-22 - 富文本编辑器最终验证
+- ✅ 全部 17 个测试用例通过
+- ✅ 图片上传 API 正常工作（支持 JPG/PNG/GIF/WebP/SVG）
+- ✅ 附件上传 API 正常工作（支持 PDF/Word/Excel/PPT/TXT）
+- ✅ Markdown 预览功能正常
+- ✅ TipTap 编辑器前端集成完整
+- ✅ 撤销/重做功能（Ctrl+Z / Ctrl+Y）
+- ✅ 数据库模型和文件存储正常
 
 ### 2026-03-18 - 协作功能完整实现
 - ✅ WebSocket 实时协作 (`app/websocket.py` - 491 行)
