@@ -363,6 +363,15 @@ open http://localhost:8000
 
 ## 📝 开发日志
 
+### 2026-03-25 - 富文本编辑器修复与完善
+- ✅ 修复 Attachment 模型外键约束问题（note_id 改为 nullable）
+- ✅ 所有 17 个测试用例通过
+- ✅ 图片上传 API 正常工作（支持 JPG/PNG/GIF/WebP/SVG）
+- ✅ 附件上传 API 正常工作（支持 PDF/Word/Excel/PPT/TXT）
+- ✅ TipTap 编辑器前端集成完整
+- ✅ 撤销/重做功能（Ctrl+Z / Ctrl+Y）
+- ✅ 数据库模型和文件存储正常
+
 ### 2026-03-22 - 富文本编辑器最终验证
 - ✅ 全部 17 个测试用例通过
 - ✅ 图片上传 API 正常工作（支持 JPG/PNG/GIF/WebP/SVG）

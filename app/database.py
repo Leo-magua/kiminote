@@ -296,7 +296,7 @@ class Attachment(Base):
     __tablename__ = "attachments"
     
     id = Column(Integer, primary_key=True, index=True)
-    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False, index=True)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # File info
