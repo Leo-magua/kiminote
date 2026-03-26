@@ -3,7 +3,7 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-24 21:00
+> 最后更新：2026-03-27 02:00
 
 ---
 
@@ -33,7 +33,7 @@ AI Notes 是一个功能完善的智能化笔记应用，集成了富文本编�
 ### 2. 富文本编辑器 ✅ (2026-03-18 完整实现)
 
 #### 核心编辑器
-- **前端实现** (`static/js/editor.js` - 981 行)
+- **前端实现** (`static/js/editor.js` - 990 行)
   - `RichTextEditor` 类：TipTap 编辑器封装
   - 三种编辑模式：富文本编辑、实时预览、Markdown 源码
   - 完整的工具栏支持（撤销/重做、格式化、列表、表格等）
@@ -493,7 +493,7 @@ open http://localhost:8000
 - `app/main.py` - 上传相关 API 端点
 - `app/database.py` - Attachment 模型和 CRUD 操作
 - `app/schemas.py` - 上传响应模型
-- `static/js/editor.js` - TipTap 编辑器实现 (981 行)
+- `static/js/editor.js` - TipTap 编辑器实现 (990 行)
 - `static/css/editor.css` - 编辑器样式
 - `templates/index.html` - 编辑器界面集成
 
