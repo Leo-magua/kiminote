@@ -8,6 +8,14 @@
     <link rel="stylesheet" href="/static/css/editor.css">
     <link rel="stylesheet" href="/static/css/collaboration.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <!-- KaTeX for Math Support -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <!-- Mermaid for Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+    <!-- Emoji Picker -->
+    <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.21.0/index.min.js" type="module"></script>
     <!-- DOMPurify for XSS protection -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
@@ -188,6 +196,15 @@
                             </button>
                             <button type="button" class="toolbar-btn" data-command="attachment" title="上传附件">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            </button>
+                            <button type="button" class="toolbar-btn" data-command="math" title="插入数学公式">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+                            </button>
+                            <button type="button" class="toolbar-btn" data-command="diagram" title="插入图表 (Mermaid)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                            </button>
+                            <button type="button" class="toolbar-btn" data-command="emoji" title="插入表情">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                             </button>
                         </div>
                         <div class="toolbar-divider"></div>
@@ -625,6 +642,70 @@
                 <div id="versionPreviewMeta" class="version-preview-meta"></div>
                 <h4 id="versionPreviewTitle"></h4>
                 <div id="versionPreviewContent" class="version-preview-content markdown-preview"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Math Formula Modal -->
+    <div id="mathModal" class="modal hidden">
+        <div class="modal-content modal-content-small">
+            <div class="modal-header">
+                <h3>📐 插入数学公式</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="math-tabs">
+                    <button class="math-tab-btn active" data-tab="inline">行内公式</button>
+                    <button class="math-tab-btn" data-tab="block">块级公式</button>
+                </div>
+                <textarea id="mathInput" placeholder="输入 LaTeX 公式，例如: E = mc^2" rows="4"></textarea>
+                <div class="math-preview">
+                    <label>预览:</label>
+                    <div id="mathPreview"></div>
+                </div>
+                <button id="insertMathBtn" class="btn-primary">插入公式</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Diagram Modal -->
+    <div id="diagramModal" class="modal hidden">
+        <div class="modal-content modal-content-large">
+            <div class="modal-header">
+                <h3>📊 插入图表 (Mermaid)</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="diagram-templates">
+                    <label>选择模板:</label>
+                    <select id="diagramTemplate">
+                        <option value="">空白</option>
+                        <option value="flowchart">流程图</option>
+                        <option value="sequence">序列图</option>
+                        <option value="gantt">甘特图</option>
+                        <option value="class">类图</option>
+                        <option value="state">状态图</option>
+                    </select>
+                </div>
+                <textarea id="diagramInput" placeholder="输入 Mermaid 语法..." rows="10"></textarea>
+                <div class="diagram-preview">
+                    <label>预览:</label>
+                    <div id="diagramPreview"></div>
+                </div>
+                <button id="insertDiagramBtn" class="btn-primary">插入图表</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Emoji Picker Modal -->
+    <div id="emojiModal" class="modal hidden">
+        <div class="modal-content modal-content-small">
+            <div class="modal-header">
+                <h3>😊 选择表情</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <emoji-picker id="emojiPicker"></emoji-picker>
             </div>
         </div>
     </div>

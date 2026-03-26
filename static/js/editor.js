@@ -219,6 +219,15 @@ class RichTextEditor {
             case 'attachment':
                 this.promptAttachment();
                 break;
+            case 'math':
+                this.promptMath();
+                break;
+            case 'diagram':
+                this.promptDiagram();
+                break;
+            case 'emoji':
+                this.promptEmoji();
+                break;
             default:
                 console.log('Unknown command:', command);
         }
@@ -974,6 +983,142 @@ class RichTextEditor {
 
 // Global editor instance
 window.RichTextEditor = RichTextEditor;
+
+    // Math formula handling
+    promptMath() {
+        const modal = document.getElementById('mathModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('mathInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            this.updateMathPreview();
+        }
+    }
+
+    insertMath(latex, isBlock = false) {
+        if (!this.editor || !latex) return;
+        
+        if (isBlock) {
+            // Block formula
+            this.editor.chain().focus().insertContent({
+                type: 'paragraph',
+                content: [{ type: 'text', text: `$$${latex}$$` }]
+            }).run();
+        } else {
+            // Inline formula
+            this.editor.chain().focus().insertContent({
+                type: 'text',
+                text: `$${latex}$`
+            }).run();
+        }
+    }
+
+    updateMathPreview() {
+        const input = document.getElementById('mathInput');
+        const preview = document.getElementById('mathPreview');
+        const inlineTab = document.querySelector('.math-tab-btn[data-tab="inline"]');
+        
+        if (input && preview && typeof katex !== 'undefined') {
+            const isBlock = inlineTab && !inlineTab.classList.contains('active');
+            try {
+                katex.render(input.value, preview, {
+                    throwOnError: false,
+                    displayMode: isBlock
+                });
+            } catch (e) {
+                preview.innerHTML = '<span style="color: #ef4444;">公式语法错误</span>';
+            }
+        }
+    }
+
+    // Diagram handling
+    promptDiagram() {
+        const modal = document.getElementById('diagramModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('diagramInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            this.updateDiagramPreview();
+        }
+    }
+
+    insertDiagram(mermaidCode) {
+        if (!this.editor || !mermaidCode) return;
+        
+        // Insert as a special code block with mermaid class
+        this.editor.chain().focus().insertContent({
+            type: 'paragraph',
+            content: [{ 
+                type: 'text', 
+                text: '```mermaid\n' + mermaidCode + '\n```'
+            }]
+        }).run();
+    }
+
+    async updateDiagramPreview() {
+        const input = document.getElementById('diagramInput');
+        const preview = document.getElementById('diagramPreview');
+        
+        if (input && preview && typeof mermaid !== 'undefined') {
+            try {
+                preview.innerHTML = '<div class="mermaid">' + input.value + '</div>';
+                await mermaid.run({ nodes: [preview.querySelector('.mermaid')] });
+            } catch (e) {
+                preview.innerHTML = '<span style="color: #ef4444;">图表语法错误: ' + e.message + '</span>';
+            }
+        }
+    }
+
+    // Emoji handling
+    promptEmoji() {
+        const modal = document.getElementById('emojiModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+
+    insertEmoji(emoji) {
+        if (!this.editor || !emoji) return;
+        
+        this.editor.chain().focus().insertContent({
+            type: 'text',
+            text: emoji
+        }).run();
+    }
+
+    // Render math formulas in preview
+    renderMathInElement(element) {
+        if (typeof renderMathInElement !== 'undefined' && element) {
+            renderMathInElement(element, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        }
+    }
+
+    // Render mermaid diagrams in preview
+    async renderMermaidDiagrams(element) {
+        if (typeof mermaid !== 'undefined' && element) {
+            const nodes = element.querySelectorAll('.language-mermaid, .mermaid');
+            if (nodes.length > 0) {
+                try {
+                    await mermaid.run({ nodes: Array.from(nodes) });
+                } catch (e) {
+                    console.warn('Mermaid rendering error:', e);
+                }
+            }
+        }
+    }
+}
 
 // Export for module systems (if needed)
 if (typeof module !== 'undefined' && module.exports) {

@@ -235,6 +235,11 @@ const elements = {
     tableInsertModal: document.getElementById('tableInsertModal'),
     linkInsertModal: document.getElementById('linkInsertModal'),
     
+    // New Feature Modals
+    mathModal: document.getElementById('mathModal'),
+    diagramModal: document.getElementById('diagramModal'),
+    emojiModal: document.getElementById('emojiModal'),
+    
     // Markdown Import/Export buttons
     mdImportBtn: document.getElementById('mdImportBtn'),
     mdExportBtn: document.getElementById('mdExportBtn')
@@ -729,7 +734,7 @@ function switchTab(tabName) {
 }
 
 // Update markdown preview
-function updatePreview() {
+async function updatePreview() {
     const content = getCurrentContent();
     
     // Parse markdown
@@ -746,6 +751,32 @@ function updatePreview() {
     elements.previewContent.querySelectorAll('pre code').forEach((block) => {
         hljs.highlightElement(block);
     });
+    
+    // Render math formulas using KaTeX
+    if (typeof renderMathInElement !== 'undefined') {
+        try {
+            renderMathInElement(elements.previewContent, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        } catch (e) {
+            console.warn('Math rendering error:', e);
+        }
+    }
+    
+    // Render Mermaid diagrams
+    if (typeof mermaid !== 'undefined') {
+        try {
+            await mermaid.run({
+                nodes: Array.from(elements.previewContent.querySelectorAll('.language-mermaid, .mermaid'))
+            });
+        } catch (e) {
+            console.warn('Mermaid rendering error:', e);
+        }
+    }
 }
 
 // ========== Collaboration Functions ==========
@@ -1904,6 +1935,107 @@ document.getElementById('uploadAttachmentBtn')?.addEventListener('click', handle
 document.getElementById('mdExportBtn')?.addEventListener('click', handleMarkdownExport);
 document.getElementById('mdImportBtn')?.addEventListener('click', handleMarkdownImport);
 
+// Math formula modal
+document.getElementById('insertMathBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('mathInput');
+    const inlineTab = document.querySelector('.math-tab-btn[data-tab="inline"]');
+    if (input && richTextEditor) {
+        const isBlock = !inlineTab?.classList.contains('active');
+        richTextEditor.insertMath(input.value, isBlock);
+        toggleModal(elements.mathModal, false);
+    }
+});
+
+// Math tabs
+document.querySelectorAll('.math-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.math-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (richTextEditor) {
+            richTextEditor.updateMathPreview();
+        }
+    });
+});
+
+// Math input preview
+document.getElementById('mathInput')?.addEventListener('input', () => {
+    if (richTextEditor) {
+        richTextEditor.updateMathPreview();
+    }
+});
+
+// Diagram modal
+document.getElementById('insertDiagramBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('diagramInput');
+    if (input && richTextEditor) {
+        richTextEditor.insertDiagram(input.value);
+        toggleModal(elements.diagramModal, false);
+    }
+});
+
+// Diagram template selector
+document.getElementById('diagramTemplate')?.addEventListener('change', (e) => {
+    const templates = {
+        flowchart: `flowchart TD
+    A[开始] --> B{判断}
+    B -->|条件1| C[处理1]
+    B -->|条件2| D[处理2]
+    C --> E[结束]
+    D --> E`,
+        sequence: `sequenceDiagram
+    participant A as 用户
+    participant B as 系统
+    A->>B: 请求
+    B->>B: 处理
+    B-->>A: 响应`,
+        gantt: `gantt
+    title 项目计划
+    dateFormat  YYYY-MM-DD
+    section 阶段1
+    任务1           :a1, 2024-01-01, 7d
+    任务2           :after a1, 5d`,
+        class: `classDiagram
+    class Animal {
+        +String name
+        +makeSound()
+    }
+    class Dog {
+        +fetch()
+    }
+    Animal <|-- Dog`,
+        state: `stateDiagram-v2
+    [*] --> 空闲
+    空闲 --> 运行: 开始
+    运行 --> 暂停: 暂停
+    运行 --> 完成: 结束
+    暂停 --> 运行: 恢复
+    完成 --> [*]`
+    };
+    
+    const input = document.getElementById('diagramInput');
+    if (input && templates[e.target.value]) {
+        input.value = templates[e.target.value];
+        if (richTextEditor) {
+            richTextEditor.updateDiagramPreview();
+        }
+    }
+});
+
+// Diagram input preview
+document.getElementById('diagramInput')?.addEventListener('input', () => {
+    if (richTextEditor) {
+        richTextEditor.updateDiagramPreview();
+    }
+});
+
+// Emoji picker
+document.getElementById('emojiPicker')?.addEventListener('emoji-click', (e) => {
+    if (richTextEditor && e.detail) {
+        richTextEditor.insertEmoji(e.detail.unicode);
+        toggleModal(elements.emojiModal, false);
+    }
+});
+
 // Upload tabs
 document.querySelectorAll('.upload-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1954,6 +2086,15 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// Initialize Mermaid
+if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        securityLevel: 'strict'
+    });
+}
 
 // Initialize
 async function init() {
