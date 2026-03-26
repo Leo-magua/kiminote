@@ -979,6 +979,152 @@ class RichTextEditor {
             this.editor.chain().focus().insertContent(content).run();
         }
     }
+
+    // ========== Math Formula Methods ==========
+    promptMath() {
+        const modal = document.getElementById('mathModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('mathInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+                this.updateMathPreview();
+            }
+        }
+    }
+
+    insertMath(latex, isBlock = false) {
+        if (!this.editor || !latex.trim()) return;
+        
+        const delimiter = isBlock ? '$$' : '$';
+        const content = `${delimiter}${latex}${delimiter}`;
+        
+        this.editor.chain().focus().insertContent(content).run();
+        
+        // Trigger KaTeX rendering if available
+        setTimeout(() => this.renderMath(), 100);
+    }
+
+    updateMathPreview() {
+        const input = document.getElementById('mathInput');
+        const preview = document.getElementById('mathPreview');
+        const inlineTab = document.querySelector('.math-tab-btn[data-tab="inline"]');
+        
+        if (!input || !preview || typeof katex === 'undefined') return;
+        
+        const latex = input.value.trim();
+        const isBlock = !inlineTab?.classList.contains('active');
+        
+        if (!latex) {
+            preview.innerHTML = '<span style="color: #999;">公式预览将显示在这里</span>';
+            return;
+        }
+        
+        try {
+            preview.innerHTML = katex.renderToString(latex, {
+                displayMode: isBlock,
+                throwOnError: false
+            });
+        } catch (error) {
+            preview.innerHTML = `<span style="color: #e74c3c;">语法错误: ${this.escapeHtml(error.message)}</span>`;
+        }
+    }
+
+    renderMath() {
+        if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(this.element, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ]
+            });
+        }
+    }
+
+    // ========== Diagram Methods ==========
+    promptDiagram() {
+        const modal = document.getElementById('diagramModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            const input = document.getElementById('diagramInput');
+            const template = document.getElementById('diagramTemplate');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            if (template) {
+                template.value = '';
+            }
+            this.updateDiagramPreview();
+        }
+    }
+
+    insertDiagram(mermaidCode) {
+        if (!this.editor || !mermaidCode.trim()) return;
+        
+        const content = `\n\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n`;
+        this.editor.chain().focus().insertContent(content).run();
+        
+        // Trigger Mermaid rendering if available
+        setTimeout(() => this.renderDiagrams(), 100);
+    }
+
+    updateDiagramPreview() {
+        const input = document.getElementById('diagramInput');
+        const preview = document.getElementById('diagramPreview');
+        
+        if (!input || !preview) return;
+        
+        const code = input.value.trim();
+        
+        if (!code) {
+            preview.innerHTML = '<span style="color: #999;">图表预览将显示在这里</span>';
+            return;
+        }
+        
+        // Clear and render with Mermaid
+        preview.innerHTML = '<div class="mermaid">' + this.escapeHtml(code) + '</div>';
+        
+        if (typeof mermaid !== 'undefined') {
+            try {
+                mermaid.run({
+                    nodes: preview.querySelectorAll('.mermaid')
+                });
+            } catch (error) {
+                preview.innerHTML = `<span style="color: #e74c3c;">渲染错误: ${this.escapeHtml(error.message)}</span>`;
+            }
+        }
+    }
+
+    renderDiagrams() {
+        if (typeof mermaid !== 'undefined') {
+            mermaid.run({
+                nodes: this.element.querySelectorAll('.mermaid')
+            });
+        }
+    }
+
+    // ========== Emoji Methods ==========
+    promptEmoji() {
+        const modal = document.getElementById('emojiModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+
+    insertEmoji(emoji) {
+        if (!this.editor || !emoji) return;
+        this.editor.chain().focus().insertContent(emoji).run();
+    }
+
+    // ========== Utility Methods ==========
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 }
 
 // Global editor instance

@@ -381,6 +381,18 @@ open http://localhost:8000
 
 ## 📝 开发日志
 
+### 2026-03-27 - 富文本编辑器高级功能完善
+- ✅ 修复 editor.js 缺失的方法
+  - 添加 `promptMath()` 和 `insertMath()` 方法支持数学公式插入
+  - 添加 `updateMathPreview()` 方法支持公式实时预览
+  - 添加 `promptDiagram()` 和 `insertDiagram()` 方法支持图表插入
+  - 添加 `updateDiagramPreview()` 方法支持图表实时预览
+  - 添加 `promptEmoji()` 和 `insertEmoji()` 方法支持表情插入
+  - 添加 `renderMath()` 和 `renderDiagrams()` 方法支持内容渲染
+  - 添加 `escapeHtml()` 工具方法防止 XSS
+- ✅ 所有 17 个测试用例通过
+- ✅ 代码已提交到 Git 仓库
+
 ### 2026-03-27 - 富文本编辑器高级功能增强
 - ✅ 添加数学公式支持（KaTeX 集成）
   - 支持 LaTeX 行内公式（$...$）和块级公式（$$...$$）
