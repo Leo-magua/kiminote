@@ -363,7 +363,7 @@ open http://localhost:8000
 
 ## 📝 开发日志
 
-### 2026-03-26 - 富文本编辑器功能完整实现
+### 2026-03-26 - 富文本编辑器功能完整实现与代码提交
 - ✅ 集成 TipTap.js v2.2+ 富文本编辑器
 - ✅ 三种编辑模式：富文本编辑、实时预览、Markdown 源码
 - ✅ 图片上传 API（POST /api/upload/image）支持 JPG/PNG/GIF/WebP/SVG，最大 10MB
@@ -377,6 +377,7 @@ open http://localhost:8000
 - ✅ 字数统计（实时显示字数和字符数）
 - ✅ 拖拽上传和粘贴上传图片
 - ✅ 所有 17 个测试用例通过
+- ✅ 代码已提交到 Git 仓库
 
 ### 2026-03-25 - 富文本编辑器修复与完善
 - ✅ 修复 Attachment 模型外键约束问题（note_id 改为 nullable）
