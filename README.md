@@ -1261,3 +1261,84 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
 
 - ✅ 所有代码已提交到 Git 仓库
 - ✅ 已推送到远程仓库 (origin/main)
+
+---
+
+## 📝 富文本编辑器实现状态 (2026-03-27)
+
+### 已实现功能
+
+#### 核心编辑器
+- ✅ **TipTap.js v2.2+ 集成** - 基于 ProseMirror 的现代化编辑器
+- ✅ **三种编辑模式** - 富文本编辑、实时预览、Markdown 源码
+- ✅ **撤销重做** - 工具栏按钮 + 快捷键 (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+- ✅ **自动保存** - 每30秒自动保存到 localStorage
+- ✅ **字数统计** - 实时显示字数和字符数
+
+#### 媒体支持
+- ✅ **图片上传** - 拖拽上传、点击上传、粘贴上传、URL 插入
+  - 支持格式：JPG、PNG、GIF、WebP、SVG
+  - 最大文件大小：10MB
+- ✅ **附件管理** - 多文件上传、列表显示、删除
+  - 支持格式：PDF、Word、Excel、PPT、TXT、视频、音频
+  - 最大文件大小：50MB
+
+#### 排版工具
+- ✅ **表格编辑** - 插入表格、添加/删除行列、切换表头、右键上下文菜单
+- ✅ **任务列表** - 可勾选的任务项，支持嵌套
+- ✅ **代码高亮** - 集成 highlight.js 语法高亮
+- ✅ **6级标题**、粗体、斜体、删除线、高亮、引用、分隔线
+
+#### 高级功能
+- ✅ **数学公式** - KaTeX 集成，支持 LaTeX 行内和块级公式
+- ✅ **图表绘制** - Mermaid 集成，支持流程图、序列图、甘特图等
+- ✅ **表情符号** - emoji-picker-element 集成
+- ✅ **Markdown 双向转换** - Turndown.js + Marked.js
+
+#### 后端 API
+- ✅ `POST /api/upload/image` - 图片上传
+- ✅ `POST /api/upload/attachment` - 附件上传
+- ✅ `GET /api/notes/{id}/attachments` - 获取附件列表
+- ✅ `PUT /api/notes/{id}/attachments` - 更新附件关联
+- ✅ `DELETE /api/attachments/{id}` - 删除附件
+- ✅ `POST /api/preview` - Markdown 转 HTML 预览
+
+### 文件变更
+| 文件 | 说明 |
+|------|------|
+| `app/main.py` | 上传相关 API 端点 (2082 行) |
+| `app/database.py` | Attachment 模型和 CRUD 操作 |
+| `app/schemas.py` | 上传响应模型 |
+| `static/js/editor.js` | TipTap 编辑器实现 (1136 行) |
+| `static/css/editor.css` | 编辑器样式 (885 行) |
+| `templates/index.html` | 编辑器界面集成 (737 行) |
+
+### 测试覆盖
+```bash
+$ pytest tests/ -v
+============================= test session starts ==============================
+collected 17 items
+
+tests/test_collaboration.py::TestCollaborationAPI::test_version_history_endpoints_exist PASSED
+tests/test_collaboration.py::TestCollaborationAPI::test_collaborator_endpoints_exist PASSED
+tests/test_collaboration.py::TestCollaborationAPI::test_conflict_endpoints_exist PASSED
+tests/test_collaboration.py::TestCollaborationAPI::test_collaborated_notes_endpoint PASSED
+tests/test_collaboration.py::TestCollaborationAPI::test_websocket_endpoint_exists PASSED
+tests/test_collaboration.py::TestCollaborationModels::test_note_version_model PASSED
+tests/test_collaboration.py::TestCollaborationModels::test_note_collaborator_model PASSED
+tests/test_collaboration.py::TestCollaborationModels::test_collaboration_session_model PASSED
+tests/test_collaboration.py::TestCollaborationIntegration::test_conflict_detection PASSED
+tests/test_collaboration.py::TestCollaborationIntegration::test_merge_changes PASSED
+tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_endpoint_exists PASSED
+tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_invalid_format PASSED
+tests/test_rich_text_editor.py::TestAttachmentUpload::test_upload_attachment_endpoint_exists PASSED
+tests/test_rich_text_editor.py::TestAttachmentUpload::test_get_note_attachments_endpoint_exists PASSED
+tests/test_rich_text_editor.py::TestEditorAPI::test_markdown_preview_endpoint PASSED
+tests/test_rich_text_editor.py::TestEditorAPI::test_editor_static_files PASSED
+tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor PASSED
+
+======================= 17 passed in 19.94s =======================
+```
+
+### 状态
+**✅ 富文本编辑器功能完整实现，所有测试通过，已上线**
