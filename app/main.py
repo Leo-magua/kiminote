@@ -5,7 +5,7 @@ import json
 import markdown
 from datetime import datetime
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response, status, WebSocket
+from fastapi import FastAPI, Body, Depends, HTTPException, Query, Request, Response, status, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
@@ -590,7 +590,7 @@ async def update_existing_note(
 )
 async def update_note_attachments(
     note_id: int,
-    attachment_ids: List[int],
+    attachment_ids: List[int] = Body(..., description="附件ID列表"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
