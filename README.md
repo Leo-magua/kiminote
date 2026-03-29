@@ -1348,13 +1348,17 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
 ## ✅ 富文本编辑器最终更新 (2026-03-29)
 
 ### 本次更新内容
-1. **API 健壮性增强**: 为 `PUT /api/notes/{id}/attachments` 端点的 `attachment_ids` 参数显式添加 `Body(...)` 注解，确保请求体解析更加可靠。
-2. **测试覆盖增强**: 将富文本编辑器相关测试从 7 个扩展到 11 个，新增：
+1. **TipTap CDN 全局变量修复**
+   - 修复 `@tiptap/*` UMD 构建挂载在 `window["@tiptap/..."]` 下导致编辑器初始化失败的问题。
+   - 在 `templates/index.html` 增加映射脚本，桥接到 `editor.js` 预期的 `window.tiptap`、`window.tiptapImage` 等变量，确保 TipTap 编辑器正常初始化。
+   - 移除无效的 `lowlight@3.1.0` CDN 链接（无 UMD 构建，返回 404）并清理未使用的 `extension-code-block-lowlight` 引用。
+2. **API 健壮性增强**: 为 `PUT /api/notes/{id}/attachments` 端点的 `attachment_ids` 参数显式添加 `Body(...)` 注解，确保请求体解析更加可靠。
+3. **测试覆盖增强**: 将富文本编辑器相关测试从 7 个扩展到 11 个，新增：
    - 图片实际上传成功测试
    - 附件实际上传成功测试
    - 附件与笔记关联更新测试
    - 附件删除测试
-3. **全量回归**: 所有 21 个测试用例通过，无破坏性变更。
+4. **全量回归**: 所有 21 个测试用例通过，无破坏性变更。
 
 ### 测试结果
 ```bash
@@ -1394,6 +1398,8 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
 ## 📝 最近更新
 
 ### 2026-03-29
+- ✅ 修复 TipTap.js UMD CDN 全局变量映射问题，确保编辑器正常初始化
+- ✅ 移除无效的 lowlight CDN 链接，清理未使用的 code-block-lowlight 引用
 - ✅ 完善富文本编辑器的图片上传与笔记关联机制
 - ✅ 附件与图片在保存笔记时自动关联到数据库，删除笔记时同步清理文件
 - ✅ 支持通过工具栏、拖拽、粘贴三种方式上传图片，全部纳入附件管理

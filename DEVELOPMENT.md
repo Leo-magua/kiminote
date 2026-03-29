@@ -3,7 +3,7 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-29 20:30
+> 最后更新：2026-03-29 22:00
 
 ---
 
@@ -11,6 +11,15 @@
 
 ### 项目概述
 AI Notes 是一个功能完善的智能化笔记应用，集成了富文本编辑、AI 辅助、实时协作、版本控制等高级功能。
+
+### 2026-03-29 - 富文本编辑器 TipTap CDN 修复
+- ✅ 修复 TipTap.js UMD 构建全局变量映射问题
+  - `@tiptap/*` 扩展的 UMD 包挂载在 `window["@tiptap/..."]` 下，与 `editor.js` 中预期的不一致
+  - 在 `templates/index.html` 中增加映射脚本，正确桥接到 `window.tiptap`、`window.tiptapImage` 等变量
+- ✅ 移除无效的 `lowlight@3.1.0` CDN 链接（该版本无 UMD 构建，返回 404）
+- ✅ 清理未使用的 `@tiptap/extension-code-block-lowlight` 引用
+- ✅ 所有 21 个测试用例通过，现有功能未受影响
+- ✅ 代码已提交到 Git 仓库
 
 ---
 
@@ -381,7 +390,12 @@ open http://localhost:8000
 
 ## 📝 开发日志
 
-### 2026-03-29 - 富文本编辑器上传与附件管理完善
+### 2026-03-29 - 富文本编辑器 TipTap CDN 修复与完善
+- ✅ 修复 TipTap.js UMD 构建全局变量映射问题
+  - `@tiptap/*` 扩展的 UMD 包挂载在 `window["@tiptap/..."]` 下，与 `editor.js` 原有预期变量名不一致
+  - 在 `templates/index.html` 中增加映射脚本，正确桥接到 `window.tiptap`、`window.tiptapImage` 等变量
+- ✅ 移除无效的 `lowlight@3.1.0` CDN 链接（该版本无 UMD 构建，返回 404）
+- ✅ 清理未使用的 `@tiptap/extension-code-block-lowlight` 引用
 - ✅ 修复图片上传后未关联到笔记的问题
   - `uploadImage()` 现在返回完整的上传结果对象（包含 `id`、`url` 等元数据）
   - `handleInsertImage()` 将上传后的图片自动加入 `currentAttachments` 追踪列表
@@ -592,10 +606,15 @@ Made with ❤️ using FastAPI + OpenAI + TipTap.js
 ## ✅ 富文本编辑器功能最终更新 (2026-03-29)
 
 ### 更新内容
-1. **API 健壮性增强**
+1. **TipTap CDN 全局变量修复**
+   - 修复 `@tiptap/*` UMD 构建挂载在 `window["@tiptap/..."]` 下导致编辑器初始化失败的问题。
+   - 在 `templates/index.html` 增加映射脚本，桥接到 `editor.js` 预期的 `window.tiptap`、`window.tiptapImage` 等变量。
+   - 移除无效的 `lowlight@3.1.0` CDN 链接（无 UMD 构建，返回 404）并清理未使用的 `extension-code-block-lowlight` 引用。
+
+2. **API 健壮性增强**
    - `PUT /api/notes/{id}/attachments` 端点显式使用 `Body(...)` 注解解析 `attachment_ids`，提升接口可靠性。
 
-2. **测试覆盖增强**
+3. **测试覆盖增强**
    - 新增 4 个富文本编辑器相关测试用例：
      - `test_upload_image_success`：验证图片实际上传成功并返回正确元数据
      - `test_upload_attachment_success`：验证附件实际上传成功并返回正确元数据
@@ -604,7 +623,7 @@ Made with ❤️ using FastAPI + OpenAI + TipTap.js
    - 富文本编辑器相关测试从 7 个增至 11 个。
    - 项目总测试用例从 17 个增至 21 个，全部通过。
 
-3. **文档更新**
+4. **文档更新**
    - `README.md`：补充最终验证报告与最新测试结果
    - `DEVELOPMENT.md`：更新最后更新时间与测试覆盖说明
 
