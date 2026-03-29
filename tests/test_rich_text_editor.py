@@ -338,5 +338,100 @@ class TestEditorFrontend:
         assert "richtexteditor" in content.lower() or "rich-text" in content.lower() or "editor.js" in content.lower(), "Rich text editor integration should be present"
 
 
+class TestContentHtmlStorage:
+    """Test content_html dual-mode storage for rich text editor"""
+    
+    @pytest.fixture(scope="class")
+    def auth_token(self):
+        """Get authentication token for tests"""
+        return get_auth_token()
+    
+    def test_create_note_with_content_html(self, auth_token):
+        """Test creating a note with content_html preserves HTML content"""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        payload = {
+            "title": "HTML Test Note",
+            "content": "# HTML Test\n\nThis is **bold**.",
+            "content_html": "<h1>HTML Test</h1><p>This is <strong>bold</strong>.</p>"
+        }
+        
+        response = client.post("/api/notes", headers=headers, json=payload)
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        data = response.json()
+        
+        assert data["title"] == payload["title"]
+        assert data["content"] == payload["content"]
+        assert data["content_html"] == payload["content_html"]
+        
+        # Verify retrieval also returns content_html
+        note_id = data["id"]
+        get_response = client.get(f"/api/notes/{note_id}", headers=headers)
+        assert get_response.status_code == 200
+        get_data = get_response.json()
+        assert get_data["content_html"] == payload["content_html"]
+    
+    def test_update_note_with_content_html(self, auth_token):
+        """Test updating a note updates content_html correctly"""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # Create initial note
+        create_payload = {
+            "title": "Initial Title",
+            "content": "Initial content.",
+            "content_html": "<p>Initial content.</p>"
+        }
+        create_response = client.post("/api/notes", headers=headers, json=create_payload)
+        assert create_response.status_code == 200
+        note_id = create_response.json()["id"]
+        
+        # Update with new HTML
+        update_payload = {
+            "title": "Updated Title",
+            "content": "Updated content.",
+            "content_html": "<p>Updated content.</p><p>Extra paragraph.</p>"
+        }
+        update_response = client.put(f"/api/notes/{note_id}", headers=headers, json=update_payload)
+        assert update_response.status_code == 200, f"Expected 200, got {update_response.status_code}: {update_response.text}"
+        
+        # Verify update
+        get_response = client.get(f"/api/notes/{note_id}", headers=headers)
+        assert get_response.status_code == 200
+        get_data = get_response.json()
+        assert get_data["title"] == update_payload["title"]
+        assert get_data["content_html"] == update_payload["content_html"]
+    
+    def test_share_page_uses_content_html(self, auth_token):
+        """Test that share page renders content_html when available"""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        html_content = "<h1>Shared HTML</h1><p>Custom <em>styled</em> paragraph.</p>"
+        payload = {
+            "title": "Share HTML Test",
+            "content": "# Shared HTML\n\nCustom *styled* paragraph.",
+            "content_html": html_content
+        }
+        
+        # Create note
+        note_response = client.post("/api/notes", headers=headers, json=payload)
+        assert note_response.status_code == 200
+        note_id = note_response.json()["id"]
+        
+        # Create share
+        share_response = client.post("/api/shares", headers=headers, json={
+            "note_id": note_id,
+            "permission": "public"
+        })
+        assert share_response.status_code == 200
+        token = share_response.json()["share_token"]
+        
+        # Access share page
+        share_page = client.get(f"/s/{token}")
+        assert share_page.status_code == 200
+        
+        # The HTML content should be present in the rendered page
+        assert html_content in share_page.text, "Share page should render content_html directly"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

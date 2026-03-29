@@ -128,8 +128,10 @@ class Share(Base):
         """Convert share to dictionary (exclude sensitive data)"""
         return {
             "id": self.id,
+            "share_token": self.token,
             "token": self.token,
             "note_id": self.note_id,
+            "user_id": self.owner_id,
             "permission": self.permission,
             "is_active": self.is_active,
             "has_password": self.password_hash is not None,

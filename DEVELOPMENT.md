@@ -3,7 +3,7 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-30 02:00
+> 最后更新：2026-03-30 04:30
 
 ---
 
@@ -11,6 +11,15 @@
 
 ### 项目概述
 AI Notes 是一个功能完善的智能化笔记应用，集成了富文本编辑、AI 辅助、实时协作、版本控制等高级功能。
+
+### 2026-03-30 - 富文本编辑器最终验证与修复
+- ✅ 移除 `templates/index.html` 中重复引入的 `marked` 库（CDN 重复加载）
+- ✅ 修复 `app/main.py` 中 `TemplateResponse` 的 Starlette 新版弃用语法警告
+- ✅ 修复 `app/main.py` 中 `create_share()` 调用参数名错误（`user_id` → `owner_id`）
+- ✅ 修复 `Share.to_dict()` 缺失 `share_token` 和 `user_id` 导致的 FastAPI 响应验证失败
+- ✅ 新增 `TestContentHtmlStorage` 测试组，覆盖 `content_html` 的创建、更新、分享页面渲染（3 个新测试）
+- ✅ 全部 24 个测试用例通过（10 协作 + 14 编辑器）
+- ✅ 代码已提交到 Git 仓库
 
 ### 2026-03-30 - 富文本编辑器双模式存储增强
 - ✅ 为 `Note` 和 `NoteVersion` 模型添加 `content_html` 字段

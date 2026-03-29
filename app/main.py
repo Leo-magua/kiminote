@@ -121,8 +121,7 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse, tags=["Web"], include_in_schema=False)
 async def index(request: Request, current_user: dict = Depends(get_current_user)):
     """Main page - requires authentication"""
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", {
         "app_name": APP_NAME,
         "ai_available": ai_service.is_available(),
         "user": current_user
@@ -132,8 +131,7 @@ async def index(request: Request, current_user: dict = Depends(get_current_user)
 @app.get("/login", response_class=HTMLResponse, tags=["Web"], include_in_schema=False)
 async def login_page(request: Request):
     """Login page"""
-    return templates.TemplateResponse("login.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "login.html", {
         "app_name": APP_NAME
     })
 
@@ -141,8 +139,7 @@ async def login_page(request: Request):
 @app.get("/register", response_class=HTMLResponse, tags=["Web"], include_in_schema=False)
 async def register_page(request: Request):
     """Register page"""
-    return templates.TemplateResponse("register.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "register.html", {
         "app_name": APP_NAME
     })
 
@@ -1063,7 +1060,7 @@ async def create_note_share(
     share = create_share(
         db,
         note_id=share_data.note_id,
-        user_id=current_user["id"],
+        owner_id=current_user["id"],
         permission=share_data.permission,
         password=share_data.password,
         expires_days=share_data.expires_days
@@ -1362,8 +1359,7 @@ async def share_page(
     """Share page - displays shared note without login"""
     share = get_share_by_token(db, token)
     if not share:
-        return templates.TemplateResponse("share.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "share.html", {
             "app_name": APP_NAME,
             "error": "分享链接不存在或已过期",
             "require_password": False,
@@ -1372,8 +1368,7 @@ async def share_page(
     
     # Check if share is valid
     if not share.is_valid():
-        return templates.TemplateResponse("share.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "share.html", {
             "app_name": APP_NAME,
             "error": "分享链接已过期或被禁用",
             "require_password": False,
@@ -1382,8 +1377,7 @@ async def share_page(
     
     # Check permission
     if share.permission == "private":
-        return templates.TemplateResponse("share.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "share.html", {
             "app_name": APP_NAME,
             "error": "此分享为私密分享，无法访问",
             "require_password": False,
@@ -1395,8 +1389,7 @@ async def share_page(
         # If password provided, verify it
         if password:
             if not verify_share_password(db, token, password):
-                return templates.TemplateResponse("share.html", {
-                    "request": request,
+                return templates.TemplateResponse(request, "share.html", {
                     "app_name": APP_NAME,
                     "error": "密码错误，请重试",
                     "require_password": True,
@@ -1404,8 +1397,7 @@ async def share_page(
                 })
         else:
             # Show password form
-            return templates.TemplateResponse("share.html", {
-                "request": request,
+            return templates.TemplateResponse(request, "share.html", {
                 "app_name": APP_NAME,
                 "error": None,
                 "require_password": True,
@@ -1415,8 +1407,7 @@ async def share_page(
     # Get note
     note = get_note(db, share.note_id)
     if not note:
-        return templates.TemplateResponse("share.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "share.html", {
             "app_name": APP_NAME,
             "error": "笔记不存在或已被删除",
             "require_password": False,
@@ -1433,8 +1424,7 @@ async def share_page(
         md_converter.reset()
         html_content = md_converter.convert(note.content)
     
-    return templates.TemplateResponse("share.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "share.html", {
         "app_name": APP_NAME,
         "note": note,
         "note_dict": note.to_dict(),
