@@ -21,6 +21,17 @@ AI Notes 是一个功能完善的智能化笔记应用，集成了富文本编�
 - ✅ 全部 24 个测试用例通过（10 协作 + 14 编辑器）
 - ✅ 代码已提交到 Git 仓库
 
+### 2026-03-30 - 开发任务：添加富文本编辑器功能完成
+- ✅ 集成 TipTap.js v2.2+ (ProseMirror) 富文本编辑器
+- ✅ 实现图片上传功能（拖拽、点击、剪贴板粘贴）
+- ✅ 实现附件管理功能（PDF/Word/Excel/PPT/TXT/视频/音频）
+- ✅ 实现撤销重做功能（快捷键 Ctrl+Z / Ctrl+Y）
+- ✅ 三模式编辑：富文本编辑、实时预览、Markdown 源码
+- ✅ 双模式内容存储：Markdown (`content`) + HTML (`content_html`)
+- ✅ 所有 24 个测试用例通过
+- ✅ README.md 和 DEVELOPMENT.md 文档已更新
+- ✅ 代码已提交到 Git 仓库
+
 ### 2026-03-30 - 富文本编辑器双模式存储增强
 - ✅ 为 `Note` 和 `NoteVersion` 模型添加 `content_html` 字段
   - 同时保存 Markdown (`content`) 和 HTML (`content_html`)，完整保留富文本格式
