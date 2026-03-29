@@ -12,6 +12,7 @@ AI Notes 是一个智能化的笔记应用，集成了 AI 功能来帮助用户�
 - 📝 **创建、编辑、删除笔记** - 简洁直观的笔记管理
 - 🎨 **富文本编辑器** (✅ 完整实现) - 基于 TipTap.js v2.2+ (ProseMirror) 的现代化编辑器
   - **三种编辑模式**：富文本编辑、实时预览、Markdown 源码，自由切换
+  - **双模式内容存储**：同时保存 Markdown (`content`) 和 HTML (`content_html`)，富文本格式完整保留，分享页面直接渲染 HTML
   - **图片上传**：支持拖拽上传、点击上传和剪贴板粘贴（JPG/PNG/GIF/WebP/SVG，最大 10MB），上传后自动关联到当前笔记
   - **附件管理**：支持多种文件类型上传（PDF/Word/Excel/PPT/TXT/视频/音频，最大 50MB），保存笔记时自动建立关联，删除笔记时自动清理文件
   - **撤销重做**：完整的编辑历史栈，支持工具栏按钮和快捷键（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z）
@@ -1396,6 +1397,15 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
 ---
 
 ## 📝 最近更新
+
+### 2026-03-30
+- ✅ 富文本编辑器支持双模式内容存储：同时保存 Markdown (`content`) 和 HTML (`content_html`)
+  - `Note` 和 `NoteVersion` 模型新增 `content_html` 字段，完整保留 TipTap 编辑器的 HTML 格式
+  - 创建/更新/恢复笔记时同步保存 HTML，分享页面优先渲染 HTML，无 HTML 时自动降级为 Markdown 转换
+  - 前端加载笔记时优先使用 `content_html` 还原编辑器状态，避免 Markdown↔HTML 反复转换导致的格式损耗
+  - API 请求/响应模型 (`NoteCreateRequest`, `NoteUpdateRequest`, `NoteResponse`, `VersionResponse`) 均已支持 `content_html`
+- ✅ 版本历史、冲突解决、协作编辑等模块完整兼容 `content_html`，恢复版本时一同还原 HTML 内容
+- ✅ 所有 21 个测试用例通过，向后兼容无 HTML 内容的历史笔记
 
 ### 2026-03-29
 - ✅ 修复 TipTap.js UMD CDN 全局变量映射问题，确保编辑器正常初始化

@@ -51,6 +51,7 @@ class Note(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
+    content_html = Column(Text, nullable=True)  # Rich text HTML content
     summary = Column(Text, nullable=True)
     tags = Column(String(500), nullable=True)  # Comma-separated tags
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -72,6 +73,7 @@ class Note(Base):
             "user_id": self.user_id,
             "title": self.title,
             "content": self.content,
+            "content_html": self.content_html,
             "summary": self.summary,
             "tags": [tag.strip() for tag in self.tags.split(",")] if self.tags else [],
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -181,6 +183,7 @@ class NoteVersion(Base):
     version_number = Column(Integer, nullable=False)  # Sequential version number
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
+    content_html = Column(Text, nullable=True)  # Rich text HTML content
     summary = Column(Text, nullable=True)
     tags = Column(String(500), nullable=True)
     
@@ -204,6 +207,7 @@ class NoteVersion(Base):
             "version_number": self.version_number,
             "title": self.title,
             "content": self.content,
+            "content_html": self.content_html,
             "summary": self.summary,
             "tags": [tag.strip() for tag in self.tags.split(",")] if self.tags else [],
             "change_summary": self.change_summary,
@@ -392,12 +396,13 @@ def get_all_users(db: Session) -> List[User]:
 
 # ============== Note CRUD Operations ==============
 
-def create_note(db: Session, user_id: int, title: str, content: str, summary: str = None, tags: str = None) -> Note:
+def create_note(db: Session, user_id: int, title: str, content: str, content_html: str = None, summary: str = None, tags: str = None) -> Note:
     """Create a new note"""
     db_note = Note(
         user_id=user_id,
         title=title,
         content=content,
+        content_html=content_html,
         summary=summary,
         tags=tags
     )
@@ -440,7 +445,7 @@ def update_note(db: Session, note_id: int, user_id: int = None, **kwargs) -> Opt
     if not db_note:
         return None
     
-    allowed_fields = ['title', 'content', 'summary', 'tags']
+    allowed_fields = ['title', 'content', 'content_html', 'summary', 'tags']
     for key, value in kwargs.items():
         if key in allowed_fields and value is not None:
             setattr(db_note, key, value)
@@ -949,6 +954,7 @@ def create_note_version(
     user_id: int,
     title: str,
     content: str,
+    content_html: str = None,
     summary: str = None,
     tags: str = None,
     change_summary: str = None,
@@ -962,12 +968,19 @@ def create_note_version(
     
     version_number = 1 if not latest_version else latest_version.version_number + 1
     
+    # Get current note's content_html if not provided
+    if content_html is None:
+        note = db.query(Note).filter(Note.id == note_id).first()
+        if note:
+            content_html = note.content_html
+    
     version = NoteVersion(
         note_id=note_id,
         user_id=user_id,
         version_number=version_number,
         title=title,
         content=content,
+        content_html=content_html,
         summary=summary,
         tags=tags,
         change_summary=change_summary,
@@ -1022,6 +1035,7 @@ def restore_note_version(db: Session, note_id: int, version_id: int, user_id: in
     
     note.title = version.title
     note.content = version.content
+    note.content_html = version.content_html
     note.summary = version.summary
     note.tags = version.tags
     note.updated_at = datetime.utcnow()
@@ -1033,6 +1047,7 @@ def restore_note_version(db: Session, note_id: int, version_id: int, user_id: in
         user_id=user_id,
         title=version.title,
         content=version.content,
+        content_html=version.content_html,
         summary=version.summary,
         tags=version.tags,
         change_summary=f"Restored to version {version.version_number}",
@@ -1436,6 +1451,8 @@ def merge_changes(
         note.title = changes["title"]
     if "content" in changes:
         note.content = changes["content"]
+    if "content_html" in changes:
+        note.content_html = changes["content_html"]
     if "summary" in changes:
         note.summary = changes["summary"]
     if "tags" in changes:
@@ -1450,6 +1467,7 @@ def merge_changes(
         user_id=user_id,
         title=note.title,
         content=note.content,
+        content_html=note.content_html,
         summary=note.summary,
         tags=note.tags,
         change_summary=changes.get("change_summary", "Merged changes"),

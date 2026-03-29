@@ -61,12 +61,14 @@ class NoteCreateRequest(BaseModel):
     """创建笔记请求"""
     title: str = Field(..., min_length=1, max_length=200, description="笔记标题")
     content: str = Field(..., description="笔记内容 (支持 Markdown)")
+    content_html: Optional[str] = Field(None, description="笔记内容的 HTML 格式（富文本编辑器使用）")
     
     model_config = {
         "json_schema_extra": {
             "example": {
                 "title": "我的第一篇笔记",
-                "content": "# 欢迎使用 AI Notes\n\n这是一个支持 **Markdown** 的笔记应用。"
+                "content": "# 欢迎使用 AI Notes\n\n这是一个支持 **Markdown** 的笔记应用。",
+                "content_html": "<h1>欢迎使用 AI Notes</h1><p>这是一个支持 <strong>Markdown</strong> 的笔记应用。</p>"
             }
         }
     }
@@ -76,12 +78,14 @@ class NoteUpdateRequest(BaseModel):
     """更新笔记请求"""
     title: Optional[str] = Field(None, min_length=1, max_length=200, description="笔记标题")
     content: Optional[str] = Field(None, description="笔记内容 (支持 Markdown)")
+    content_html: Optional[str] = Field(None, description="笔记内容的 HTML 格式（富文本编辑器使用）")
     
     model_config = {
         "json_schema_extra": {
             "example": {
                 "title": "更新后的标题",
-                "content": "更新后的内容"
+                "content": "更新后的内容",
+                "content_html": "<p>更新后的内容</p>"
             }
         }
     }
@@ -366,6 +370,7 @@ class NoteResponse(BaseModel):
     user_id: int = Field(..., description="所属用户ID")
     title: str = Field(..., description="笔记标题")
     content: str = Field(..., description="笔记内容")
+    content_html: Optional[str] = Field(None, description="笔记内容的 HTML 格式")
     summary: Optional[str] = Field(None, description="AI 生成的摘要")
     tags: List[str] = Field(default_factory=list, description="标签列表")
     created_at: Optional[str] = Field(None, description="创建时间 (ISO 8601 格式)")
@@ -379,6 +384,7 @@ class NoteResponse(BaseModel):
                 "user_id": 1,
                 "title": "我的第一篇笔记",
                 "content": "# 欢迎使用 AI Notes",
+                "content_html": "<h1>欢迎使用 AI Notes</h1>",
                 "summary": "这是一篇欢迎笔记，介绍了 AI Notes 的基本功能。",
                 "tags": ["欢迎", "介绍"],
                 "created_at": "2026-03-13T12:00:00",
@@ -638,6 +644,7 @@ class VersionResponse(BaseModel):
     version_number: int = Field(..., description="版本号")
     title: str = Field(..., description="版本标题")
     content: str = Field(..., description="版本内容")
+    content_html: Optional[str] = Field(None, description="版本内容的 HTML 格式")
     summary: Optional[str] = Field(None, description="摘要")
     tags: List[str] = Field(default_factory=list, description="标签列表")
     change_summary: Optional[str] = Field(None, description="变更摘要")
@@ -653,6 +660,7 @@ class VersionResponse(BaseModel):
                 "version_number": 3,
                 "title": "笔记标题 v3",
                 "content": "笔记内容...",
+                "content_html": "<p>笔记内容...</p>",
                 "summary": "摘要",
                 "tags": ["标签1"],
                 "change_summary": "更新了内容",

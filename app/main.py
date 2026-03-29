@@ -458,6 +458,7 @@ async def create_new_note(
         user_id=current_user["id"],
         title=title,
         content=content,
+        content_html=note_data.content_html,
         summary=summary,
         tags=tags
     )
@@ -470,6 +471,7 @@ async def create_new_note(
         user_id=current_user["id"],
         title=note.title,
         content=note.content,
+        content_html=note.content_html,
         summary=note.summary,
         tags=note.tags,
         change_summary="Note created",
@@ -558,6 +560,7 @@ async def update_existing_note(
         user_id=current_user["id"],
         title=title, 
         content=content,
+        content_html=note_data.content_html,
         summary=summary,
         tags=tags
     )
@@ -571,6 +574,7 @@ async def update_existing_note(
             user_id=current_user["id"],
             title=note.title,
             content=note.content,
+            content_html=note.content_html,
             summary=note.summary,
             tags=note.tags,
             change_summary="Updated via API",
@@ -1422,9 +1426,12 @@ async def share_page(
     # Increment access count
     verify_share_access(db, token)
     
-    # Convert markdown to HTML
-    md_converter.reset()
-    html_content = md_converter.convert(note.content)
+    # Use stored HTML content if available, otherwise convert markdown to HTML
+    if note.content_html:
+        html_content = note.content_html
+    else:
+        md_converter.reset()
+        html_content = md_converter.convert(note.content)
     
     return templates.TemplateResponse("share.html", {
         "request": request,
@@ -1780,6 +1787,8 @@ async def resolve_note_conflict(
     elif resolution_data.resolution == "merge":
         if resolution_data.merged_content:
             changes["content"] = resolution_data.merged_content
+            # Clear HTML content when markdown is merged to avoid inconsistency
+            changes["content_html"] = None
         if resolution_data.merged_title:
             changes["title"] = resolution_data.merged_title
     

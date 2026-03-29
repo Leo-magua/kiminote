@@ -697,13 +697,13 @@ function getCurrentContent() {
 }
 
 // Set content to editor
-function setEditorContent(markdown) {
+function setEditorContent(markdown, html = null) {
     elements.markdownContent.value = markdown;
     
     if (richTextEditor) {
-        // Convert markdown to HTML using marked, then set to editor
-        const html = marked.parse(markdown);
-        richTextEditor.setHTML(html);
+        // Prefer HTML content if available (from rich text editor), otherwise convert markdown
+        const editorHtml = html || marked.parse(markdown);
+        richTextEditor.setHTML(editorHtml);
     }
 }
 
@@ -887,12 +887,12 @@ async function openNote(id) {
                 richTextEditor.restoreFromAutoSave(currentNote.id);
             } else {
                 // Set content from server
-                setEditorContent(currentNote.content);
+                setEditorContent(currentNote.content, currentNote.content_html);
                 richTextEditor.clearAutoSave(currentNote.id);
             }
         } else {
             // Set content to editor
-            setEditorContent(currentNote.content);
+            setEditorContent(currentNote.content, currentNote.content_html);
         }
         
         // Enable auto-save for this note
@@ -991,6 +991,7 @@ let baseVersionNumber = null;
 async function saveNote() {
     const title = elements.noteTitle.value.trim();
     const content = getCurrentContent().trim();
+    const content_html = richTextEditor ? richTextEditor.getHTML() : null;
     
     if (!title) {
         showToast('请输入标题', 'error');
@@ -1028,7 +1029,7 @@ async function saveNote() {
             }
             
             // Update existing
-            const result = await api.put(`/api/notes/${currentNote.id}`, { title, content });
+            const result = await api.put(`/api/notes/${currentNote.id}`, { title, content, content_html });
             currentNote = result;
             
             // Update base version after successful save
@@ -1046,7 +1047,7 @@ async function saveNote() {
             showAutoSaveStatus('saved');
         } else {
             // Create new
-            const result = await api.post('/api/notes', { title, content });
+            const result = await api.post('/api/notes', { title, content, content_html });
             currentNote = result;
             
             // Set base version for conflict detection

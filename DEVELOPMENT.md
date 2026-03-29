@@ -12,6 +12,17 @@
 ### 项目概述
 AI Notes 是一个功能完善的智能化笔记应用，集成了富文本编辑、AI 辅助、实时协作、版本控制等高级功能。
 
+### 2026-03-30 - 富文本编辑器双模式存储增强
+- ✅ 为 `Note` 和 `NoteVersion` 模型添加 `content_html` 字段
+  - 同时保存 Markdown (`content`) 和 HTML (`content_html`)，完整保留富文本格式
+  - 前端保存笔记时通过 API 同步提交 `content_html`
+  - 前端加载笔记时优先使用 `content_html` 还原编辑器，避免格式转换损耗
+  - 分享页面优先渲染 `content_html`，否则自动降级为 Markdown 转换
+- ✅ 更新 `NoteCreateRequest` / `NoteUpdateRequest` / `NoteResponse` / `VersionResponse` Schema，支持 `content_html`
+- ✅ 版本恢复、冲突解决、协作编辑等流程完整兼容 `content_html`
+- ✅ 所有 21 个测试用例通过，向后兼容无 HTML 的历史笔记
+- ✅ 代码已提交到 Git 仓库
+
 ### 2026-03-29 - 富文本编辑器 TipTap CDN 修复
 - ✅ 修复 TipTap.js UMD 构建全局变量映射问题
   - `@tiptap/*` 扩展的 UMD 包挂载在 `window["@tiptap/..."]` 下，与 `editor.js` 中预期的不一致
@@ -591,7 +602,7 @@ open http://localhost:8000
 ### 部署状态
 - ✅ 代码已提交到 Git 仓库
 - ✅ 应用可正常启动
-- ✅ 所有测试通过 (17/17)
+- ✅ 所有测试通过 (21/21)
 - ✅ 无破坏性变更
 
 ---
@@ -641,3 +652,48 @@ Made with ❤️ using FastAPI + OpenAI + TipTap.js
 | 文档 | ✅ README + DEVELOPMENT 已更新 |
 
 **最终状态：✅ 富文本编辑器功能完整实现，已通过增强验证，代码已提交。**
+
+---
+
+## ✅ 富文本编辑器功能最终更新 (2026-03-30)
+
+### 本次更新内容
+
+1. **双模式内容存储 (`content_html`)**
+   - 为 `Note` 和 `NoteVersion` 模型新增 `content_html` 字段，实现 Markdown + HTML 双模式存储
+   - 同时保存 `content` (Markdown) 和 `content_html` (HTML)，完整保留 TipTap 编辑器的富文本格式
+   - 前端保存笔记时同步提交 `content_html`，加载笔记时优先使用 `content_html` 还原编辑器状态
+   - 分享页面 (`templates/share.html`) 优先渲染 `content_html`，不存在时自动降级为 Markdown 转换
+   - 版本恢复、冲突解决、协作编辑等流程完整兼容 `content_html`
+
+2. **Schema 与 API 更新**
+   - `NoteCreateRequest` / `NoteUpdateRequest` 新增 `content_html` 可选字段
+   - `NoteResponse` / `VersionResponse` 响应中返回 `content_html`
+   - 后端 `create_note`、`update_note`、`create_note_version`、`restore_note_version`、`merge_changes` 均支持 `content_html`
+
+3. **文件变更**
+   - `app/database.py` - `Note` / `NoteVersion` 模型及 CRUD 函数添加 `content_html` 支持
+   - `app/schemas.py` - 请求/响应模型添加 `content_html`
+   - `app/main.py` - 笔记创建/更新/恢复/冲突解决 API 处理 `content_html`
+   - `static/js/app.js` - 保存时提交 `content_html`，加载时优先使用 `content_html`
+   - `templates/share.html` - 优先使用 `content_html` 渲染
+
+4. **向后兼容**
+   - 历史笔记（无 `content_html`）仍然可以正常加载和编辑，自动降级为 Markdown↔HTML 转换
+   - 所有 21 个测试用例通过，无破坏性变更
+
+### 验收结果
+| 检查项 | 状态 |
+|--------|------|
+| 数据模型 | ✅ `Note` / `NoteVersion` 已支持 `content_html` |
+| API 接口 | ✅ 创建/更新/恢复/冲突解决均支持 `content_html` |
+| 前端集成 | ✅ 保存提交 HTML，加载优先使用 HTML |
+| 分享页面 | ✅ 优先渲染 HTML，自动降级 Markdown |
+| 图片上传 | ✅ 拖拽/点击/粘贴/URL 插入均支持 |
+| 附件管理 | ✅ 上传/显示/删除/关联均支持 |
+| 撤销重做 | ✅ TipTap History + 工具栏按钮 + 快捷键 |
+| 测试覆盖 | ✅ 21/21 通过 |
+| 兼容性 | ✅ 向后兼容历史笔记 |
+| 文档 | ✅ README + DEVELOPMENT 已更新 |
+
+**最终状态：✅ 富文本编辑器功能完整实现，已支持双模式内容存储，所有测试通过，代码已提交。**
