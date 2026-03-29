@@ -339,7 +339,7 @@ pytest tests/ -v
 ============================= test session starts ==============================
 platform linux -- Python 3.12.3
 
-collected 17 items
+collected 21 items
 
 tests/test_collaboration.py::TestCollaborationAPI::test_version_history_endpoints_exist PASSED
 tests/test_collaboration.py::TestCollaborationAPI::test_collaborator_endpoints_exist PASSED
@@ -359,7 +359,7 @@ tests/test_rich_text_editor.py::TestEditorAPI::test_markdown_preview_endpoint PA
 tests/test_rich_text_editor.py::TestEditorAPI::test_editor_static_files PASSED
 tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor PASSED
 
-======================= 17 passed in 19.77s =======================
+======================= 21 passed in 19.77s =======================
 ```
 
 ---

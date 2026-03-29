@@ -2,10 +2,14 @@
 FastAPI main application for AI Notes
 """
 import json
+import mimetypes
+import os
 import markdown
+import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI, Body, Depends, HTTPException, Query, Request, Response, status, WebSocket
+from fastapi import FastAPI, Body, Depends, File, HTTPException, Query, Request, Response, UploadFile, status, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
@@ -1824,13 +1828,6 @@ async def get_collaborated_notes(
 
 
 # ============== File Upload API ==============
-
-import os
-import uuid
-import mimetypes
-from pathlib import Path
-from fastapi import File, UploadFile
-
 
 @app.get(
     "/api/notes/{note_id}/attachments",

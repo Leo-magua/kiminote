@@ -4,7 +4,7 @@ Database models and operations for AI Notes - Share functionality
 from datetime import datetime, timedelta
 from typing import List, Optional
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from app.config import DATABASE_URL
 

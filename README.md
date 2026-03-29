@@ -1254,7 +1254,7 @@ tests/test_rich_text_editor.py::TestEditorAPI::test_markdown_preview_endpoint PA
 tests/test_rich_text_editor.py::TestEditorAPI::test_editor_static_files PASSED
 tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor PASSED
 
-======================= 17 passed in 19.73s =======================
+======================= 21 passed in 19.73s =======================
 ```
 
 #### 5. 代码提交
@@ -1317,7 +1317,7 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
 ```bash
 $ pytest tests/ -v
 ============================= test session starts ==============================
-collected 17 items
+collected 21 items
 
 tests/test_collaboration.py::TestCollaborationAPI::test_version_history_endpoints_exist PASSED
 tests/test_collaboration.py::TestCollaborationAPI::test_collaborator_endpoints_exist PASSED
@@ -1337,7 +1337,7 @@ tests/test_rich_text_editor.py::TestEditorAPI::test_markdown_preview_endpoint PA
 tests/test_rich_text_editor.py::TestEditorAPI::test_editor_static_files PASSED
 tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor PASSED
 
-======================= 17 passed in 19.94s =======================
+======================= 21 passed in 19.94s =======================
 ```
 
 ### 状态
