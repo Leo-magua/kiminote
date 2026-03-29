@@ -3,7 +3,7 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-29 03:30
+> 最后更新：2026-03-29 17:30
 
 ---
 
@@ -380,6 +380,20 @@ open http://localhost:8000
 ---
 
 ## 📝 开发日志
+
+### 2026-03-29 - 富文本编辑器上传与附件管理完善
+- ✅ 修复图片上传后未关联到笔记的问题
+  - `uploadImage()` 现在返回完整的上传结果对象（包含 `id`、`url` 等元数据）
+  - `handleInsertImage()` 将上传后的图片自动加入 `currentAttachments` 追踪列表
+  - 新增 `onImageUploadComplete` 回调，使拖拽/粘贴上传的图片也能被正确追踪
+- ✅ 增强附件关联保存机制
+  - `updateNoteAttachments()` 合并 `currentAttachments` 与编辑器内部附件列表，确保图片和文档附件在保存笔记时完整关联到数据库
+  - `openNote()` 和 `createNewNote()` 正确同步编辑器内部附件状态，避免数据不一致
+- ✅ 撤销重做功能保持完整
+  - TipTap History 扩展正常工作
+  - 工具栏按钮和快捷键（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z）全部可用
+- ✅ 所有 21 个测试用例通过（含 17 个既有测试 + 新增验证）
+- ✅ 代码已提交到 Git 仓库
 
 ### 2026-03-28 - 富文本编辑器功能最终验证与提交
 - ✅ 完整验证富文本编辑器所有功能

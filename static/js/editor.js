@@ -9,6 +9,7 @@ class RichTextEditor {
         this.element = options.element || document.getElementById('editor');
         this.onChange = options.onChange || (() => {});
         this.onImageUpload = options.onImageUpload || null;
+        this.onImageUploadComplete = options.onImageUploadComplete || null;
         this.onAttachmentUpload = options.onAttachmentUpload || null;
         this.editor = null;
         this.attachments = [];
@@ -401,10 +402,16 @@ class RichTextEditor {
 
         try {
             if (this.onImageUpload) {
-                const imageUrl = await this.onImageUpload(file);
+                const result = await this.onImageUpload(file);
+                const imageUrl = typeof result === 'string' ? result : result.url;
                 // Replace loading text with image
                 this.editor.commands.undo();
                 this.editor.chain().focus().setImage({ src: imageUrl, alt: file.name }).run();
+                
+                // Notify completion for attachment tracking
+                if (typeof result === 'object' && result.id && this.onImageUploadComplete) {
+                    this.onImageUploadComplete(result);
+                }
                 
                 // Show success notification if showToast is available
                 if (typeof showToast === 'function') {

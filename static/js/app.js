@@ -641,6 +641,12 @@ function initRichTextEditor() {
         onImageUpload: async (file) => {
             return await uploadImage(file);
         },
+        onImageUploadComplete: (result) => {
+            // Track uploaded image as an attachment for note association
+            if (result && result.id && !currentAttachments.some(att => att.id === result.id)) {
+                currentAttachments.push(result);
+            }
+        },
         onAttachmentUpload: async (file) => {
             return await uploadAttachment(file);
         }
@@ -656,7 +662,7 @@ function initRichTextEditor() {
 async function uploadImage(file) {
     try {
         const result = await api.uploadFile('/api/upload/image', file);
-        return result.url;
+        return result;
     } catch (error) {
         console.error('Image upload error:', error);
         throw new Error('图片上传失败: ' + error.message);
@@ -896,6 +902,9 @@ async function openNote(id) {
         
         // Load attachments
         await renderAttachmentList();
+        if (richTextEditor) {
+            richTextEditor.attachments = currentAttachments;
+        }
         
         renderNoteMeta();
         
@@ -953,6 +962,7 @@ async function createNewNote() {
     // Clear editor
     if (richTextEditor) {
         richTextEditor.setHTML('');
+        richTextEditor.attachments = [];
     }
     
     // Clear attachment list
@@ -1068,10 +1078,17 @@ async function saveNote() {
 
 // Update attachment associations for current note
 async function updateNoteAttachments(noteId) {
-    if (!currentAttachments || currentAttachments.length === 0) return;
+    // Merge app-level attachments with editor-level attachments (images, drag-and-drop)
+    const editorAttachments = richTextEditor ? richTextEditor.getAttachments() : [];
+    const allAttachments = [
+        ...currentAttachments,
+        ...editorAttachments.filter(ea => !currentAttachments.some(ca => ca.id === ea.id))
+    ];
+    
+    if (!allAttachments || allAttachments.length === 0) return;
     
     try {
-        const attachmentIds = currentAttachments.map(att => att.id);
+        const attachmentIds = allAttachments.map(att => att.id);
         await api.put(`/api/notes/${noteId}/attachments`, attachmentIds);
     } catch (error) {
         console.error('Failed to update attachments:', error);
@@ -1706,10 +1723,16 @@ async function handleInsertImage() {
             const file = fileInput.files[0];
             try {
                 showToast('正在上传图片...');
-                const url = await uploadImage(file);
+                const result = await uploadImage(file);
+                const imageUrl = result.url || result;
                 
                 if (richTextEditor && richTextEditor.editor) {
-                    richTextEditor.editor.chain().focus().setImage({ src: url, alt: file.name }).run();
+                    richTextEditor.editor.chain().focus().setImage({ src: imageUrl, alt: file.name }).run();
+                }
+                
+                // Track image as attachment for note association
+                if (result.id && !currentAttachments.some(att => att.id === result.id)) {
+                    currentAttachments.push(result);
                 }
                 
                 showToast('图片插入成功');
