@@ -13,10 +13,12 @@ class AIService:
     def __init__(self):
         self.client = None
         self.model = OPENAI_MODEL
-        if OPENAI_API_KEY:
+        if OPENAI_API_KEY and OPENAI_API_KEY.strip() not in ('', 'your_openai_api_key_here'):
             self.client = OpenAI(
                 api_key=OPENAI_API_KEY,
-                base_url=OPENAI_BASE_URL
+                base_url=OPENAI_BASE_URL,
+                timeout=10.0,
+                max_retries=1
             )
     
     def is_available(self) -> bool:

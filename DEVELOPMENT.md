@@ -3,14 +3,22 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-30 08:00
+> 最后更新：2026-03-30 18:35
 
 ---
 
-## 🎉 项目完整实现总结 (2026-03-29)
+## 🎉 项目完整实现总结 (2026-03-30)
 
 ### 项目概述
 AI Notes 是一个功能完善的智能化笔记应用，集成了富文本编辑、AI 辅助、实时协作、版本控制等高级功能。
+
+### 2026-03-30 - AI 服务稳定性修复
+- ✅ 修复 `app/ai_service.py` 中无效 API Key 导致的请求超时问题
+  - 过滤掉占位符 `your_openai_api_key_here`，避免在测试/未配置环境中错误初始化 AI 客户端
+  - 为 OpenAI 客户端添加 `timeout=10.0` 和 `max_retries=1`，防止网络异常时无限挂起
+  - 确保笔记保存流程（含 `content_html` 更新）在未配置合法 API Key 时快速跳过 AI 生成，避免阻塞
+- ✅ 全部 24 个测试用例再次验证通过（10 协作 + 14 编辑器）
+- ✅ 代码已提交到 Git 仓库
 
 ### 2026-03-30 - 富文本编辑器最终验证与修复
 - ✅ 移除 `templates/index.html` 中重复引入的 `marked` 库（CDN 重复加载）
