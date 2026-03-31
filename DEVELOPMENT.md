@@ -7,13 +7,20 @@
 
 ---
 
-## 🛠️ 代码质量修复 (2026-03-31)
+## 🛠️ 代码质量修复与编辑器优化 (2026-03-31)
 
 ### 修复内容
 - **移除 `Share` 模型中重复的 `is_valid()` 方法定义** ✅
   - `app/database.py` 中 `Share` 类存在两个 `is_valid()` 方法
   - 保留包含 `max_access` 校验的完整版本，移除较早的简化版本
   - 避免方法覆盖导致的潜在逻辑不一致
+
+### 富文本编辑器 Markdown 模式同步修复 ✅
+- **修复 Markdown 标签页保存时 `content_html` 不同步问题**
+  - `static/js/app.js` 中 `saveNote()` 在 Markdown 模式下保存时，使用 `marked.parse()` 从当前 Markdown 内容重新生成 `content_html`
+  - 避免保存到服务器的 `content_html` 仍然是切到 Markdown 页面前的旧富文本 HTML
+- **修复清空 Markdown 后切换回富文本编辑器不同步问题**
+  - `switchTab('edit')` 在 Markdown 内容为空字符串时也能正确同步清空编辑器
 - **测试结果**：全部 24 个测试用例通过，无回退兼容性问题
 
 ---

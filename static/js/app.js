@@ -732,8 +732,8 @@ function switchTab(tabName) {
         }
     } else if (tabName === 'edit') {
         // Sync from textarea to editor
-        if (richTextEditor && elements.markdownContent.value) {
-            const html = marked.parse(elements.markdownContent.value);
+        if (richTextEditor && elements.markdownContent) {
+            const html = marked.parse(elements.markdownContent.value || '');
             richTextEditor.setHTML(html);
         }
     }
@@ -991,7 +991,12 @@ let baseVersionNumber = null;
 async function saveNote() {
     const title = elements.noteTitle.value.trim();
     const content = getCurrentContent().trim();
-    const content_html = richTextEditor ? richTextEditor.getHTML() : null;
+    let content_html = richTextEditor ? richTextEditor.getHTML() : null;
+    
+    // When in markdown tab, regenerate HTML from markdown to avoid stale editor HTML
+    if (currentTab === 'markdown') {
+        content_html = marked.parse(content);
+    }
     
     if (!title) {
         showToast('请输入标题', 'error');
