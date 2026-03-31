@@ -10,54 +10,34 @@ AI Notes 是一个智能化的笔记应用，集成了 AI 功能来帮助用户�
 
 ### 基础功能
 - 📝 **创建、编辑、删除笔记** - 简洁直观的笔记管理
-- 🎨 **富文本编辑器** (✅ 完整实现) - 基于 TipTap.js v2.2+ (ProseMirror) 的现代化编辑器
-  - **三种编辑模式**：富文本编辑、实时预览、Markdown 源码，自由切换
-  - **双模式内容存储**：同时保存 Markdown (`content`) 和 HTML (`content_html`)，富文本格式完整保留，分享页面直接渲染 HTML
-  - **图片上传**：支持拖拽上传、点击上传和剪贴板粘贴（JPG/PNG/GIF/WebP/SVG，最大 10MB），上传后自动关联到当前笔记
-  - **附件管理**：支持多种文件类型上传（PDF/Word/Excel/PPT/TXT/视频/音频，最大 50MB），保存笔记时自动建立关联，删除笔记时自动清理文件
-  - **撤销重做**：完整的编辑历史栈，支持工具栏按钮和快捷键（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z）
-  - **表格编辑**：插入表格、调整行列、表头支持、右键上下文菜单
-  - **任务列表**：可勾选的任务项，支持嵌套
-  - **代码高亮**：行内代码和代码块，集成 highlight.js 语法高亮
-  - **排版工具**：6级标题、粗体、斜体、删除线、高亮、引用、分隔线
-  - **链接插入**：超链接快速插入和编辑
-  - **列表支持**：无序列表、有序列表、任务列表
-  - **Markdown 双向转换**：Turndown.js (HTML→Markdown) + Marked.js (Markdown→HTML)
-  - **Markdown 导入/导出**：支持从本地文件导入导出 Markdown
-  - **自动保存**：每30秒自动保存到本地存储，防止内容丢失
-  - **字数统计**：实时显示字数和字符数统计
-  - **数学公式**：支持 LaTeX 数学公式（行内 $...$ 和块级 $$...$$）
-  - **图表绘制**：支持 Mermaid 图表（流程图、序列图、甘特图、类图、状态图）
-  - **表情符号**：内置表情选择器，快速插入 Emoji
-  - **代码块语言选择**：支持 30+ 编程语言，语法高亮
-  - **全屏编辑模式**：沉浸式写作体验，支持 F11 快捷键
-  - **查找替换**：支持区分大小写的文本查找和替换功能
-- ✍️ **Markdown 支持** - 完整的 Markdown 语法支持，实时预览
-- 🖼️ **图片管理** - 自动压缩、尺寸检测、Base64 回退
-- 📎 **附件管理** - 文件类型自动识别、图标显示、大小格式化
-- ↩️ **编辑历史** - 完整的撤销重做栈，跨操作会话保持
-- 💾 **本地存储** - 使用 SQLite 数据库存储，数据完全本地化管理
-- 📤 **导出功能** - 支持导出为 JSON 和 Markdown 格式
-- 🔐 **用户认证** - 安全的用户注册、登录、登出功能
+- 🎨 **富文本编辑器** - 基于 TipTap.js v2.2+ (ProseMirror) 的现代化编辑器
+  - 三种编辑模式：富文本编辑、实时预览、Markdown 源码
+  - 双模式内容存储：同时保存 Markdown 和 HTML
+  - 图片上传：拖拽、点击、剪贴板粘贴
+  - 附件管理：支持多种文件类型
+  - 撤销重做：快捷键和工具栏按钮
+  - 表格编辑、任务列表、代码高亮
+  - 数学公式、图表绘制、表情符号
+- 💾 **本地存储** - SQLite 数据库，数据完全本地化管理
+- 📤 **导出功能** - 支持导出为 JSON 和 Markdown
+- 🔐 **用户认证** - 安全的 JWT + Cookie 认证
 
 ### AI 功能
 - 🤖 **自动摘要** - AI 自动生成笔记内容摘要
 - 🏷️ **智能标签** - AI 自动分析并生成相关标签
-- 🔍 **智能搜索** - 基于语义理解的 AI 搜索，不只是关键词匹配
-- ✍️ **文本增强** - AI 帮助改进、简化、专业化或扩展文本内容
+- 🔍 **智能搜索** - 基于语义理解的 AI 搜索
+- ✍️ **文本增强** - AI 帮助改进、简化、专业化文本
 
 ### 协作功能
-- 👥 **实时协作** - WebSocket 多人实时协同编辑，支持多用户同时编辑同一笔记
-- 📜 **版本历史** - 自动保存笔记历史版本，支持查看、比较和恢复到任意历史版本
-- ⚡ **冲突解决** - 智能冲突检测与解决机制，支持合并更改
-- 🖱️ **光标同步** - 实时显示其他用户光标位置和编辑状态
-- 🔐 **协作者管理** - 添加/移除协作者，支持只读、读写、管理员三种权限级别
+- 👥 **实时协作** - WebSocket 多人实时协同编辑
+- 📜 **版本历史** - 自动保存笔记历史版本，支持恢复
+- ⚡ **冲突解决** - 智能冲突检测与解决机制
+- 🔐 **协作者管理** - 只读、读写、管理员三种权限
 
 ### 数据统计
 - 📊 **笔记统计** - 笔记数量、字数统计、写作习惯分析
 - 🔥 **连续写作天数** - 追踪你的写作 streak
 - 📈 **活动时间分布** - 24小时和星期分布图表
-- 📅 **活动热力图** - 最近30天写作活动可视化
 
 ## 🚀 快速开始
 
@@ -68,16 +48,13 @@ git clone <repository-url>
 cd ai_notes_project
 ```
 
-### 2. 创建虚拟环境（推荐）
+### 2. 创建虚拟环境
 
 ```bash
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS/Linux
-source venv/bin/activate
+source venv/bin/activate  # Linux/macOS
+# 或
+venv\Scripts\activate  # Windows
 ```
 
 ### 3. 安装依赖
@@ -89,20 +66,15 @@ pip install -r requirements.txt
 ### 4. 配置环境变量
 
 ```bash
-# 复制示例配置文件
 cp .env.example .env
-
 # 编辑 .env 文件，填入你的 OpenAI API 密钥
-OPENAI_API_KEY=your_api_key_here
 ```
 
 ### 5. 启动应用
 
 ```bash
-# 使用启动脚本
 python run.py
-
-# 或使用 uvicorn 直接启动
+# 或
 uvicorn app.main:app --reload
 ```
 
@@ -119,24 +91,14 @@ uvicorn app.main:app --reload
 | `OPENAI_API_KEY` | OpenAI API 密钥 | 必填 |
 | `OPENAI_BASE_URL` | API 基础 URL | https://api.openai.com/v1 |
 | `OPENAI_MODEL` | 使用的模型 | gpt-3.5-turbo |
-| `DEBUG` | 调试模式 | false |
-| `HOST` | 监听地址 | 0.0.0.0 |
-| `PORT` | 监听端口 | 8000 |
-| `SECRET_KEY` | JWT 签名密钥（生产环境必须修改） | 随机生成 |
+| `SECRET_KEY` | JWT 签名密钥 | 随机生成 |
 | `ACCESS_TOKEN_EXPIRE_DAYS` | 会话过期天数 | 7 |
-
-### 支持的 AI 提供商
-
-- **OpenAI** (默认): https://api.openai.com/v1
-- **Moonshot AI**: https://api.moonshot.cn/v1
-- **其他 OpenAI 兼容 API**: 配置 `OPENAI_BASE_URL` 即可
 
 ## 📁 项目结构
 
 ```
 ai_notes_project/
 ├── app/                    # 后端应用代码
-│   ├── __init__.py
 │   ├── main.py            # FastAPI 主应用
 │   ├── database.py        # 数据库模型和操作
 │   ├── auth.py            # 认证相关功能
@@ -145,32 +107,16 @@ ai_notes_project/
 │   ├── websocket.py       # WebSocket 实时协作
 │   └── config.py          # 配置管理
 ├── static/                # 静态文件
-│   ├── css/
-│   │   ├── style.css      # 主样式文件
-│   │   ├── auth.css       # 认证页面样式
-│   │   ├── editor.css     # 富文本编辑器样式
-│   │   ├── collaboration.css # 协作功能样式
-│   │   └── share.css      # 分享页面样式
-│   └── js/
-│       ├── app.js         # 前端逻辑
-│       ├── auth.js        # 认证相关功能
-│       ├── editor.js      # 富文本编辑器
-│       └── collaboration.js # 协作功能
+│   ├── css/               # 样式文件
+│   └── js/                # JavaScript 文件
 ├── templates/             # HTML 模板
-│   ├── index.html         # 主页面
-│   ├── login.html         # 登录页面
-│   ├── register.html      # 注册页面
-│   └── share.html         # 分享页面
 ├── tests/                 # 测试文件
-│   ├── test_collaboration.py # 协作功能测试
-│   └── test_rich_text_editor.py # 富文本编辑器测试
-├── data/                  # 数据库文件（自动创建）
+├── data/                  # 数据库文件
 ├── uploads/               # 上传文件目录
 ├── exports/               # 导出文件目录
 ├── requirements.txt       # Python 依赖
-├── .env.example          # 环境变量示例
-├── run.py                # 启动脚本
-└── README.md             # 项目说明
+├── run.py                 # 启动脚本
+└── README.md              # 项目说明
 ```
 
 ## 🎯 使用指南
@@ -183,231 +129,44 @@ ai_notes_project/
 4. **删除笔记** - 在编辑模式下点击"删除"按钮
 5. **搜索笔记** - 在左侧搜索框输入关键词
 
-### Markdown 语法支持
+### 富文本编辑器
 
-```markdown
-# 标题1
-## 标题2
-### 标题3
+- **编辑模式切换**：富文本 / 预览 / Markdown
+- **图片上传**：拖拽、点击、粘贴
+- **附件管理**：支持 PDF、Word、Excel、视频、音频等
+- **撤销重做**：Ctrl+Z / Ctrl+Y
+- **表格编辑**：插入表格、调整行列
+- **代码高亮**：支持 30+ 编程语言
+- **数学公式**：LaTeX 语法支持
+- **图表绘制**：Mermaid 语法支持
 
-**粗体文本**
-*斜体文本*
-`行内代码`
+### AI 功能
 
-- 无序列表项
-- 另一个列表项
+- **自动生成摘要和标签** - 保存笔记时自动生成
+- **智能搜索** - 点击搜索框旁的 🔍 按钮，用自然语言描述
+- **文本增强** - 点击"AI 增强"按钮选择增强方式
 
-1. 有序列表项
-2. 另一个列表项
+### 协作功能
 
-> 引用文本
+- **添加协作者** - 点击"👥 协作"按钮，输入用户名
+- **版本历史** - 点击"📜 版本"按钮查看和恢复
+- **实时协作** - 多个用户同时编辑同一笔记
 
-```python
-# 代码块
-print("Hello World")
-```
-
-| 表格 | 列2 |
-|------|-----|
-| 数据 | 数据 |
-```
-
-### AI 功能使用
-
-#### 自动生成摘要和标签
-- 创建或编辑笔记并保存后，AI 会自动生成摘要和标签
-- 也可以在编辑页面手动点击"生成摘要"或"生成标签"按钮
-
-#### 智能搜索
-- 点击搜索框旁边的 🔍 按钮
-- 用自然语言描述你想找的内容，例如：
-  - "关于项目管理的笔记"
-  - "上周记录的技术方案"
-  - "包含代码示例的笔记"
-
-#### 文本增强
-- 在编辑页面点击"AI 增强"按钮
-- 选择增强方式：改进写作、简化内容、专业化、创意写作、扩展内容
-- AI 将提供增强后的文本，你可以选择使用
-
-### 导出笔记
-
-- **JSON 导出** - 导出所有笔记为 JSON 格式，方便备份和数据迁移
-- **Markdown 导出** - 导出所有笔记为单个 Markdown 文件
-
-### 协作功能使用
-
-#### 实时协作
-- 在编辑笔记页面点击"👥 协作"按钮打开协作管理面板
-- 输入其他用户的用户名并选择权限级别（只读/读写/管理员）来添加协作者
-- 协作者打开笔记后将自动加入实时协作会话
-- 实时查看其他协作者的光标位置和编辑状态
-- WebSocket 连接支持自动重连，断线后会自动尝试恢复连接
-
-#### 版本历史
-- 点击"📜 版本"按钮查看笔记的版本历史
-- 每个保存操作都会自动创建一个新版本
-- 可以查看任意版本的内容预览
-- 支持恢复到任意历史版本（当前内容会被保存为新版本）
-- 版本类型包括：创建、编辑、恢复、合并
-
-#### 冲突解决
-- 当多个用户同时编辑并保存时，系统会自动检测冲突
-- 冲突解决选项：
-  - **使用我的版本** - 保留当前用户的修改
-  - **使用服务器版本** - 放弃本地修改，使用服务器最新版本
-  - **合并更改** - 手动合并两个版本的内容
-- 冲突检测基于版本号对比，确保数据一致性
-
-#### 协作者权限
-- **只读 (read)** - 只能查看笔记，无法编辑
-- **读写 (write)** - 可以查看和编辑笔记内容
-- **管理员 (admin)** - 可以编辑笔记、管理协作者、恢复版本
-
-## ⌨️ 快捷键
-
-### 全局快捷键
+### 快捷键
 
 | 快捷键 | 功能 |
 |--------|------|
-| `Ctrl + S` | 保存笔记 |
-| `Esc` | 返回列表 / 关闭弹窗 |
-
-### 富文本编辑器快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl + Z` | 撤销 |
-| `Ctrl + Y` | 重做 |
-| `Ctrl + Shift + Z` | 重做（替代） |
-| `Ctrl + B` | 粗体 |
-| `Ctrl + I` | 斜体 |
-| `Ctrl + K` | 插入链接 |
-
-### 数学公式
-
-编辑器支持 LaTeX 格式的数学公式：
-
-**行内公式**：使用 `$...$` 包裹
-```markdown
-质能方程 $E = mc^2$ 由爱因斯坦提出
-```
-
-**块级公式**：使用 `$$...$$` 包裹
-```markdown
-$$
-\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
-$$
-```
-
-### 图表绘制 (Mermaid)
-
-支持使用 Mermaid 语法绘制各种图表：
-
-**流程图**：
-```mermaid
-flowchart TD
-    A[开始] --> B{判断}
-    B -->|条件1| C[处理1]
-    B -->|条件2| D[处理2]
-    C --> E[结束]
-    D --> E
-```
-
-**序列图**：
-```mermaid
-sequenceDiagram
-    participant A as 用户
-    participant B as 系统
-    A->>B: 请求
-    B->>B: 处理
-    B-->>A: 响应
-```
-
-**甘特图**：
-```mermaid
-gantt
-    title 项目计划
-    dateFormat  YYYY-MM-DD
-    section 阶段1
-    任务1           :a1, 2024-01-01, 7d
-    任务2           :after a1, 5d
-```
-
-### 表格编辑快捷键
-
-在表格中可以使用以下快捷键：
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Tab` | 移动到下一个单元格 |
-| `Shift + Tab` | 移动到上一个单元格 |
-| `Enter` | 在当前单元格内换行 |
-| `Backspace`（在空单元格）| 删除当前行 |
-
-也可以右键点击表格打开上下文菜单进行更多操作。
-
-### Markdown 语法支持
-
-```markdown
-# 标题1
-## 标题2
-### 标题3
-
-**粗体文本**
-*斜体文本*
-~~删除线~~
-==高亮文本==
-`行内代码`
-
-- 无序列表项
-- 另一个列表项
-
-1. 有序列表项
-2. 另一个列表项
-
-- [ ] 未完成任务
-- [x] 已完成任务
-
-> 引用文本
-
-```python
-# 代码块
-print("Hello World")
-```
-
-| 表格 | 列2 |
-|------|-----|
-| 数据 | 数据 |
-```
-
-## 🛠️ 技术栈
-
-- **后端**: Python + FastAPI
-- **数据库**: SQLite + SQLAlchemy ORM
-- **前端**: 原生 HTML + CSS + JavaScript
-- **富文本编辑器**: TipTap.js v2.2+ (基于 ProseMirror)
-  - StarterKit：提供基础编辑功能（标题、列表、代码块等）
-  - Image 扩展：支持图片插入和 Base64 预览
-  - Table/TableRow/TableCell/TableHeader 扩展：完整的表格支持
-  - TaskList/TaskItem 扩展：可勾选的任务列表，支持嵌套
-  - Highlight 扩展：文本高亮标记
-  - Link 扩展：超链接插入和编辑
-  - Placeholder 扩展：编辑器占位提示
-  - Typography 扩展：排版优化
-  - HorizontalRule 扩展：水平分隔线
-- **Markdown 转换**: Turndown.js (HTML→Markdown) + Marked.js (Markdown→HTML)
-- **代码高亮**: highlight.js + lowlight (TipTap 集成)
-- **AI 集成**: OpenAI API
-- **Markdown 解析**: Marked.js (前端) + Python-Markdown (后端)
-- **实时协作**: WebSocket + Operational Transformation
-- **认证**: JWT + HTTP-only Cookie
-- **文件上传**: 支持图片和附件上传
+| Ctrl + S | 保存笔记 |
+| Ctrl + Z | 撤销 |
+| Ctrl + Y / Ctrl+Shift+Z | 重做 |
+| Ctrl + B | 粗体 |
+| Ctrl + I | 斜体 |
+| Ctrl + K | 插入链接 |
+| Esc | 返回列表 / 关闭弹窗 |
 
 ## 🔌 API 接口
 
-### 认证（Auth）
-
+### 认证
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/auth/register` | 用户注册 |
@@ -415,176 +174,64 @@ print("Hello World")
 | POST | `/api/auth/logout` | 用户登出 |
 | GET | `/api/auth/me` | 获取当前用户信息 |
 
-### 笔记 CRUD
-
+### 笔记
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/notes` | 获取所有笔记（需登录） |
-| POST | `/api/notes` | 创建笔记（需登录） |
-| GET | `/api/notes/{id}` | 获取单个笔记（需登录，仅自己的笔记） |
-| PUT | `/api/notes/{id}` | 更新笔记（需登录，仅自己的笔记） |
-| DELETE | `/api/notes/{id}` | 删除笔记（需登录，仅自己的笔记） |
-
-### AI 功能
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/notes/{id}/summarize` | 生成摘要（需登录） |
-| POST | `/api/notes/{id}/tags` | 生成标签（需登录） |
-| POST | `/api/search/smart` | 智能搜索（需登录） |
-| POST | `/api/ai/enhance` | 文本增强（需登录） |
-
-### 导出
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/export/json` | 导出 JSON（需登录） |
-| GET | `/api/export/markdown` | 导出所有 Markdown（需登录） |
-| GET | `/api/export/markdown/{id}` | 导出单个 Markdown（需登录） |
-
-### 数据统计
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/stats` | 获取应用基本统计（需登录） |
-| GET | `/api/stats/detailed` | 获取详细写作统计（需登录） |
-| GET | `/api/stats/daily` | 获取每日统计数据（需登录） |
+| GET | `/api/notes` | 获取笔记列表 |
+| POST | `/api/notes` | 创建笔记 |
+| GET | `/api/notes/{id}` | 获取笔记详情 |
+| PUT | `/api/notes/{id}` | 更新笔记 |
+| DELETE | `/api/notes/{id}` | 删除笔记 |
 
 ### 文件上传
-
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/upload/image` | 上传图片（JPG/PNG/GIF/WebP/SVG，最大 10MB） |
-| POST | `/api/upload/attachment` | 上传附件（文档/图片，最大 50MB） |
-| GET | `/api/notes/{id}/attachments` | 获取笔记附件列表 |
-| PUT | `/api/notes/{id}/attachments` | 更新笔记附件关联 |
+| POST | `/api/upload/image` | 上传图片 |
+| POST | `/api/upload/attachment` | 上传附件 |
+| GET | `/api/notes/{id}/attachments` | 获取附件列表 |
 | DELETE | `/api/attachments/{id}` | 删除附件 |
 
-### 富文本编辑器使用说明
-
-AI Notes 集成了强大的 **TipTap.js** 富文本编辑器，支持多种编辑模式和丰富的排版功能。
-
-#### 编辑模式切换
-
-编辑器支持三种模式，通过顶部的标签页切换：
-
-1. **编辑模式** - 所见即所得的富文本编辑
-2. **预览模式** - 实时渲染 Markdown 效果
-3. **Markdown 模式** - 直接编辑 Markdown 源码
-
-三种模式之间内容自动同步，可以随时切换。
-
-#### 工具栏功能
-
-| 按钮 | 功能 | 快捷键 |
-|------|------|--------|
-| ↩️ ↪️ | 撤销 / 重做 | Ctrl+Z / Ctrl+Y |
-| H | 标题（H1/H2/正文循环） | - |
-| B | 粗体 | Ctrl+B |
-| I | 斜体 | Ctrl+I |
-| S | 删除线 | - |
-| 🖍️ | 高亮标记 | - |
-| • 1. | 无序 / 有序列表 | - |
-| ☑️ | 任务列表 | - |
-| ` ` | 行内代码 / 代码块 | - |
-| ❝ | 引用块 | - |
-| — | 水平分隔线 | - |
-| 🔗 | 插入链接 | Ctrl+K |
-| 🖼️ | 插入图片（支持拖拽上传） | - |
-| ▦ | 插入表格 | - |
-| 📎 | 上传附件 | - |
-| 📥 📤 | Markdown 导入 / 导出 | - |
-
-#### 字数统计
-
-编辑器底部状态栏实时显示：
-- **字数**：当前内容的字数统计
-- **字符**：字符数统计（包含空格）
-- **保存状态**：自动保存和手动保存状态指示
-
-#### 图片上传
-
-- **点击上传**：点击图片按钮，选择本地图片文件
-- **拖拽上传**：直接拖拽图片到编辑器区域
-- **URL 插入**：切换到"图片链接"标签页，输入图片地址
-
-支持格式：JPG、PNG、GIF、WebP、SVG（最大 10MB）
-
-#### 附件管理
-
-- 上传的附件会显示在编辑器下方的附件列表中
-- 点击附件名称可下载查看
-- 点击 × 按钮可删除附件
-- 删除笔记时会自动清理关联的附件文件
-
-支持格式：
-- 文档：PDF、Word、Excel、PowerPoint、TXT、Markdown
-- 图片：JPG、PNG、GIF、WebP、SVG
-- 视频：MP4、AVI、MOV、WebM
-- 音频：MP3、WAV、OGG、AAC、FLAC
-- 其他：ZIP、JSON 等（最大 50MB）
-
-#### 表格编辑
-
-在表格中右键点击可打开上下文菜单，支持：
-- **添加行**：在上方或下方添加新行
-- **添加列**：在左侧或右侧添加新列
-- **删除行/列**：删除当前光标所在的行或列
-- **切换表头**：将当前行转换为表头行
-- **删除表格**：删除整个表格
-
-#### 自动保存
-
-编辑器支持自动保存到浏览器本地存储：
-- 每 30 秒自动保存编辑内容
-- 重新打开笔记时检测未保存的更改并提示恢复
-- 保存成功后自动清除自动保存数据
-- 防止意外关闭页面导致内容丢失
-- 状态栏显示保存状态（保存中... / 已保存）
-
-#### 撤销/重做
-
-- **快捷键**：Ctrl+Z 撤销，Ctrl+Y 或 Ctrl+Shift+Z 重做
-- **工具栏按钮**：点击撤销 ↩️ / 重做 ↪️ 按钮
-- **历史栈**：支持最多 100 步操作历史
-- **跨会话保持**：在编辑会话期间保持完整的历史记录
-
-#### Markdown 导入/导出
-
-- **导入**：支持从本地 Markdown 文件导入内容
-  - 自动识别文件中的标题并填充到标题输入框
-  - 支持 `.md`, `.markdown`, `.txt` 格式
-- **导出**：将当前笔记导出为 Markdown 文件
-  - 自动使用笔记标题作为文件名
-  - 保留完整的 Markdown 格式
-
-### 协作功能
-
+### AI 功能
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/notes/{id}/versions` | 获取笔记版本历史 |
-| GET | `/api/notes/{id}/versions/{version_id}` | 获取特定版本详情 |
-| POST | `/api/notes/{id}/versions/{version_id}/restore` | 恢复到指定版本 |
-| GET | `/api/notes/{id}/versions/compare` | 比较两个版本 |
-| GET | `/api/notes/{id}/collaborators` | 获取协作者列表 |
-| POST | `/api/notes/{id}/collaborators` | 添加协作者 |
-| DELETE | `/api/notes/{id}/collaborators/{user_id}` | 移除协作者 |
-| GET | `/api/notes/{id}/collaborators/active` | 获取活跃协作者 |
-| POST | `/api/notes/{id}/conflict/detect` | 检测编辑冲突 |
-| POST | `/api/notes/{id}/conflict/resolve` | 解决冲突 |
-| GET | `/api/collaborated-notes` | 获取协作笔记列表 |
-| WS | `/ws/collaborate/{note_id}` | WebSocket 实时协作 |
+| POST | `/api/notes/{id}/summarize` | 生成摘要 |
+| POST | `/api/notes/{id}/tags` | 生成标签 |
+| POST | `/api/search/smart` | 智能搜索 |
+| POST | `/api/ai/enhance` | 文本增强 |
 
-**WebSocket 消息类型：**
-- `connected` - 连接成功
-- `active_users` - 活跃用户列表
-- `user_joined` / `user_left` - 用户加入/离开
-- `content_change` - 内容变更（操作转换）
-- `cursor_update` - 光标位置更新
-- `selection_update` - 选区更新
-- `user_typing` - 用户正在输入
-- `save_requested` - 保存请求
-- `ping` / `pong` - 心跳检测
+### 协作
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/notes/{id}/versions` | 获取版本历史 |
+| POST | `/api/notes/{id}/versions/{version_id}/restore` | 恢复版本 |
+| GET | `/api/notes/{id}/collaborators` | 获取协作者 |
+| POST | `/api/notes/{id}/collaborators` | 添加协作者 |
+| WS | `/ws/collaborate/{note_id}` | WebSocket 协作 |
+
+## 🧪 运行测试
+
+```bash
+# 运行所有测试
+pytest tests/ -v
+
+# 运行富文本编辑器测试
+pytest tests/test_rich_text_editor.py -v
+
+# 运行协作功能测试
+pytest tests/test_collaboration.py -v
+```
+
+## 🛠️ 技术栈
+
+- **后端**: Python + FastAPI
+- **数据库**: SQLite + SQLAlchemy
+- **前端**: 原生 HTML + CSS + JavaScript
+- **富文本编辑器**: TipTap.js v2.2+ (ProseMirror)
+- **Markdown**: Turndown.js + Marked.js
+- **代码高亮**: highlight.js
+- **AI 集成**: OpenAI API
+- **实时协作**: WebSocket + Operational Transformation
+- **认证**: JWT + HTTP-only Cookie
 
 ## 🤝 贡献
 
@@ -596,926 +243,4 @@ MIT License
 
 ---
 
-## ✅ 协作功能完整实现确认 (2026-03-18)
-
-### 实现状态: 100% 完成 ✅ 已上线
-
-所有协作功能已完整实现、测试并部署上线：
-
-#### 1. WebSocket 实时协作 ✅
-- `CollaborationManager` 类 (491 行) - 完整的 WebSocket 连接管理
-- 操作转换算法 (`transform_operation`) - 处理并发编辑冲突
-- 自动重连机制 - 最多 5 次重连尝试，指数退避
-- 心跳检测 (ping/pong) - 保持连接活跃
-- 用户加入/离开广播通知
-- 光标位置实时同步 - 显示其他用户光标位置
-- 选区更新同步 - 显示其他用户选择的文本
-- 输入状态指示（正在输入...）- 黄色脉冲动画
-
-#### 2. 版本历史管理 ✅
-- `GET /api/notes/{id}/versions` - 获取笔记版本历史（含分页）
-- `GET /api/notes/{id}/versions/{version_id}` - 获取特定版本详情
-- `POST /api/notes/{id}/versions/{version_id}/restore` - 恢复到指定版本
-- `GET /api/notes/{id}/versions/compare` - 比较两个版本差异
-- 自动版本创建（创建/编辑/恢复/合并笔记时）
-- 变更类型标记（create/edit/restore/merge/delete）
-- 变更摘要记录
-
-#### 3. 协作者管理 ✅
-- `GET /api/notes/{id}/collaborators` - 获取协作者列表（含用户信息）
-- `POST /api/notes/{id}/collaborators` - 添加协作者（支持权限设置）
-- `DELETE /api/notes/{id}/collaborators/{user_id}` - 移除协作者
-- `GET /api/notes/{id}/collaborators/active` - 获取活跃协作者（WebSocket）
-- `GET /api/collaborated-notes` - 获取当前用户的协作笔记列表
-- 权限级别控制（read/write/admin）
-- 协作者不能添加自己，不能移除笔记所有者
-
-#### 4. 冲突解决 ✅
-- `POST /api/notes/{id}/conflict/detect` - 检测编辑冲突（基于版本号）
-- `POST /api/notes/{id}/conflict/resolve` - 解决冲突
-- 支持三种解决方式：
-  - **使用我的版本** (mine) - 保留当前用户的修改
-  - **使用服务器版本** (theirs) - 放弃本地修改，使用服务器最新版本
-  - **合并更改** (merge) - 手动合并两个版本的内容
-- 字段级变更识别（标题/内容/标签）
-- 合并后自动创建新版本
-
-#### 5. 前端协作模块 (static/js/collaboration.js - 715 行) ✅
-- `CollaborationManager` 类 - WebSocket 连接管理、自动重连、状态指示
-- `VersionHistoryManager` 类 - 版本历史加载、渲染、预览、恢复
-- `CollaboratorsManager` 类 - 协作者添加/移除/权限管理
-- `ConflictResolutionManager` 类 - 冲突检测、解决 UI、合并编辑
-- 操作转换应用（insert/delete）到编辑器
-- 远程更改指示器 - 显示其他用户编辑提示
-
-#### 6. 数据库模型 ✅
-- `NoteVersion` - 版本历史记录
-  - version_number, title, content, summary, tags
-  - change_type, change_summary
-  - created_at, user_id, note_id
-- `NoteCollaborator` - 协作者关系
-  - permission (read/write/admin)
-  - added_by, created_at, updated_at
-- `CollaborationSession` - 活跃协作会话
-  - cursor_position, selection_start, selection_end
-  - websocket_id, is_active, last_activity
-
-#### 7. 前端 UI 组件 ✅
-- 协作管理模态框 - 在线用户、添加协作者、协作者列表
-- 版本历史模态框 - 版本列表、预览、恢复
-- 版本预览模态框 - 版本详情、Markdown 渲染
-- 冲突解决模态框 - 版本对比、三种解决选项
-- 协作状态指示器 - 已连接/已断开/重连中/错误
-- 远程更改指示器 - 其他用户编辑提示
-
-#### 8. 样式支持 (static/css/collaboration.css - 510 行) ✅
-- 协作状态指示器样式（4种状态）
-- 协作者列表样式（头像、权限标签、在线状态）
-- 版本列表样式（变更类型标签、操作按钮）
-- 冲突解决模态框样式（两栏对比、响应式）
-- 远程光标样式（彩色光标、用户名标签）
-- 选区高亮样式
-
-#### 9. 集成验证 ✅
-- 与现有 JWT 认证系统兼容
-- 与富文本编辑器 (TipTap.js) 集成
-- 与 AI 功能（摘要、标签生成）兼容
-- 与分享功能兼容
-- 所有代码已提交到 Git 仓库
-
----
-
-## ✅ 协作功能实现确认 (2026-03-16)
-
-### 实现状态: 100% 完成 ✅ 已完善
-
-所有协作功能已完整实现、测试并部署：
-
-#### 1. WebSocket 实时协作
-- ✅ `CollaborationManager` 类 (490 行) - 完整的 WebSocket 连接管理
-- ✅ 自动重连机制 - 最多 5 次重连尝试
-- ✅ 心跳检测 - 保持连接活跃
-- ✅ 用户加入/离开广播通知
-- ✅ 光标位置实时同步
-- ✅ 选区更新同步
-- ✅ 输入状态指示（正在输入...）
-- ✅ 操作转换算法处理并发编辑冲突
-
-#### 2. 版本历史管理
-- ✅ `GET /api/notes/{id}/versions` - 获取版本历史
-- ✅ `GET /api/notes/{id}/versions/{version_id}` - 获取特定版本详情
-- ✅ `POST /api/notes/{id}/versions/{version_id}/restore` - 恢复到指定版本
-- ✅ `GET /api/notes/{id}/versions/compare` - 比较两个版本差异
-- ✅ 自动版本创建（创建/编辑笔记时）
-
-#### 3. 协作者管理
-- ✅ `GET /api/notes/{id}/collaborators` - 获取协作者列表
-- ✅ `POST /api/notes/{id}/collaborators` - 添加协作者
-- ✅ `DELETE /api/notes/{id}/collaborators/{user_id}` - 移除协作者
-- ✅ `GET /api/notes/{id}/collaborators/active` - 获取活跃协作者
-- ✅ `GET /api/collaborated-notes` - 获取协作笔记列表
-- ✅ 权限级别控制（read/write/admin）
-
-#### 4. 冲突解决
-- ✅ `POST /api/notes/{id}/conflict/detect` - 检测编辑冲突
-- ✅ `POST /api/notes/{id}/conflict/resolve` - 解决冲突
-- ✅ 支持三种解决方式：使用我的版本 / 使用服务器版本 / 合并更改
-- ✅ 基于版本号的冲突检测
-
-#### 5. 前端协作模块
-- ✅ `CollaborationManager` 类 - WebSocket 连接管理、自动重连、状态指示
-- ✅ `VersionHistoryManager` 类 - 版本历史加载、渲染、预览、恢复
-- ✅ `CollaboratorsManager` 类 - 协作者添加/移除/权限管理
-- ✅ `ConflictResolutionManager` 类 - 冲突检测、解决 UI、合并编辑
-
-#### 6. 数据库模型
-- ✅ `NoteVersion` - 版本历史记录
-- ✅ `NoteCollaborator` - 协作者关系
-- ✅ `CollaborationSession` - 活跃协作会话
-
-#### 7. 集成验证
-- ✅ 与现有认证系统兼容
-- ✅ 与富文本编辑器集成
-- ✅ 与 AI 功能兼容
-- ✅ 所有代码已提交到 Git 仓库
-
----
-
-## ✅ 富文本编辑器功能最终确认 (2026-03-30)
-
-### 实现状态: 100% 完成 ✅ 已上线
-
-富文本编辑器功能已完整实现、测试通过并部署上线。
-
-#### 1. TipTap.js 编辑器集成 ✅
-- **文件**: `static/js/editor.js` (900+ 行)
-- **核心功能**:
-  - 基于 TipTap.js v2.2+ (ProseMirror) 的现代化富文本编辑器
-  - 三种编辑模式：富文本编辑、实时预览、Markdown 源码，自由切换
-  - 双模式内容存储：同时保存 Markdown (`content`) 和 HTML (`content_html`)
-  - 完整的工具栏：撤销/重做、标题、粗体、斜体、删除线、高亮、列表、代码块等
-
-#### 2. 图片上传功能 ✅
-- **后端 API**: `POST /api/upload/image`
-- **支持格式**: JPG、PNG、GIF、WebP、SVG（最大 10MB）
-- **上传方式**:
-  - 点击上传：通过图片上传模态框选择文件
-  - 拖拽上传：直接拖拽图片到编辑器区域
-  - 剪贴板粘贴：复制图片后粘贴到编辑器
-- **自动关联**：上传成功后自动插入到编辑器并关联到当前笔记
-
-#### 3. 附件管理功能 ✅
-- **后端 API**:
-  - `POST /api/upload/attachment` - 上传附件（最大 50MB）
-  - `GET /api/notes/{id}/attachments` - 获取笔记附件列表
-  - `PUT /api/notes/{id}/attachments` - 更新附件关联
-  - `DELETE /api/attachments/{id}` - 删除附件
-- **支持格式**:
-  - 文档：PDF、Word、Excel、PowerPoint、TXT、Markdown
-  - 图片：JPG、PNG、GIF、WebP、SVG
-  - 媒体：视频、音频文件
-  - 其他：ZIP、JSON 等
-- **前端功能**:
-  - 附件上传模态框，支持拖拽上传
-  - 附件列表显示在编辑器下方
-  - 文件类型图标自动识别
-  - 文件大小格式化显示
-  - 删除笔记时自动清理关联附件
-
-#### 4. 撤销/重做功能 ✅
-- **快捷键**: Ctrl+Z 撤销，Ctrl+Y / Ctrl+Shift+Z 重做
-- **工具栏按钮**: 可视化撤销 ↩️ / 重做 ↪️ 按钮
-- **历史栈**: TipTap History 扩展，深度 100，自动分组
-- **按钮状态**: 根据可撤销/重做状态自动启用/禁用
-
-#### 5. 扩展功能 ✅
-- **表格编辑**: 插入表格、添加/删除行列、切换表头、右键上下文菜单
-- **任务列表**: 可勾选的任务项，支持嵌套任务
-- **代码高亮**: highlight.js 语法高亮，支持多种编程语言
-- **链接插入**: 超链接快速插入，Ctrl+K 快捷键
-- **数学公式**: KaTeX 支持 LaTeX 语法（行内 `$...$` 和块级 `$$...$$`）
-- **图表绘制**: Mermaid 支持流程图、序列图、甘特图、类图、状态图
-- **表情符号**: emoji-picker-element 集成，快速插入 Emoji
-- **自动保存**: 每 30 秒自动保存到 localStorage，防止内容丢失
-- **字数统计**: 实时显示字数和字符数，底部状态栏显示
-- **Markdown 导入/导出**: 支持本地文件导入导出 Markdown
-
-#### 6. 数据模型 ✅
-- **Note 模型**: `content_html` 字段存储富文本 HTML 内容
-- **NoteVersion 模型**: 版本历史同时保存 `content` 和 `content_html`
-- **Attachment 模型**: 完整的附件信息（文件名、大小、MIME类型、图片尺寸等）
-
-#### 7. 集成验证 ✅
-- ✅ 与 JWT 认证系统兼容 - 所有上传 API 需要登录
-- ✅ 与 AI 功能兼容 - 自动摘要和标签生成正常工作
-- ✅ 与分享功能兼容 - 分享页面优先渲染 HTML 内容
-- ✅ 与协作功能兼容 - 实时协作编辑支持富文本内容
-- ✅ 与版本历史兼容 - 版本恢复正确处理 HTML 内容
-- ✅ 所有 26 个测试用例通过
-
-#### 8. 文件清单
-| 文件 | 说明 |
-|------|------|
-| `app/main.py` | 图片/附件上传 API 端点 |
-| `app/database.py` | Attachment 模型和 CRUD 操作 |
-| `app/schemas.py` | 上传响应模型和请求模型 |
-| `static/js/editor.js` | TipTap 编辑器完整实现 (900+ 行) |
-| `static/css/editor.css` | 编辑器样式 |
-| `templates/index.html` | 编辑器界面集成 |
-
----
-
-Made with ❤️ using FastAPI + OpenAI
-
----
-
-## ✅ 协作功能最终实现确认 (2026-03-15)
-
-富文本编辑器功能已完整实现：
-
-### 已实现功能
-- ✅ TipTap.js v2.2+ 富文本编辑器集成
-- ✅ 三种编辑模式（富文本、预览、Markdown 源码）
-- ✅ 图片上传（点击上传 + 拖拽上传，最大 10MB）
-- ✅ 附件管理（PDF/Word/Excel/PPT/TXT/视频/音频，最大 50MB）
-- ✅ 撤销/重做（工具栏按钮 + 快捷键 Ctrl+Z / Ctrl+Y）
-- ✅ 表格编辑（插入表格、右键菜单调整行列）
-- ✅ 任务列表（可勾选任务项，支持嵌套）
-- ✅ 代码高亮（highlight.js 集成）
-- ✅ Markdown 双向转换（Turndown.js + Marked.js）
-- ✅ 自动保存（每30秒保存到 localStorage）
-- ✅ 字数统计（实时显示字数和字符数）
-
-### API 端点
-- `POST /api/upload/image` - 图片上传
-- `POST /api/upload/attachment` - 附件上传
-- `GET /api/notes/{id}/attachments` - 获取附件列表
-- `PUT /api/notes/{id}/attachments` - 更新附件关联
-- `DELETE /api/attachments/{id}` - 删除附件
-
-### 文件变更
-- `app/main.py` - 上传相关 API 端点
-- `app/database.py` - Attachment 模型和 CRUD 操作
-- `app/schemas.py` - 上传响应模型
-- `static/js/editor.js` - TipTap 编辑器实现
-- `static/css/editor.css` - 编辑器样式
-- `templates/index.html` - 编辑器界面集成
-
-
-
----
-
-## ✅ 协作功能最终实现确认 (2026-03-15)
-
-### 实现状态: 100% 完成 ✅
-
-#### WebSocket 实时协作 (app/websocket.py) ✅
-- `CollaborationManager` 类 - 490 行完整实现
-- WebSocket 连接管理、自动重连机制（最多 5 次）
-- 操作转换算法 (`transform_operation`) - 处理并发编辑冲突
-- 心跳检测、用户加入/离开广播
-- 光标位置同步、选区更新同步、输入状态指示
-- WebSocket 认证和权限检查
-
-#### 版本历史 API ✅
-- `GET /api/notes/{id}/versions` - 获取笔记版本历史
-- `GET /api/notes/{id}/versions/{version_id}` - 获取特定版本详情
-- `POST /api/notes/{id}/versions/{version_id}/restore` - 恢复到指定版本
-- `GET /api/notes/{id}/versions/compare` - 比较两个版本差异
-- 自动版本创建（创建/编辑笔记时）
-
-#### 协作者管理 API ✅
-- `GET /api/notes/{id}/collaborators` - 获取协作者列表
-- `POST /api/notes/{id}/collaborators` - 添加协作者
-- `DELETE /api/notes/{id}/collaborators/{user_id}` - 移除协作者
-- `GET /api/notes/{id}/collaborators/active` - 获取活跃协作者
-- `GET /api/collaborated-notes` - 获取协作笔记列表
-- 权限级别控制（read/write/admin）
-
-#### 冲突解决 API ✅
-- `POST /api/notes/{id}/conflict/detect` - 检测编辑冲突
-- `POST /api/notes/{id}/conflict/resolve` - 解决冲突
-- 支持三种解决方式：使用我的版本 / 使用服务器版本 / 合并更改
-- 基于版本号的冲突检测
-
-#### 前端协作模块 (collaboration.js) ✅
-- `CollaborationManager` 类 - WebSocket 连接管理、自动重连
-- `VersionHistoryManager` 类 - 版本历史加载、渲染、预览、恢复
-- `CollaboratorsManager` 类 - 协作者添加/移除/权限管理
-- `ConflictResolutionManager` 类 - 冲突检测、解决 UI
-
-#### 前端 UI 集成 ✅
-- 协作管理模态框、版本历史模态框
-- 版本预览模态框、冲突解决模态框
-- 协作状态指示器、远程更改指示器
-
-#### 样式支持 (style.css) ✅
-- 协作状态指示器样式（已连接/已断开/重连中/错误）
-- 协作者列表样式、版本列表样式
-- 冲突解决模态框样式、远程光标样式
-
-### 代码提交
-- 所有协作功能相关代码已提交到 Git 仓库
-- WebSocket 导入问题已修复
-- 文档已更新（README.md、DEVELOPMENT.md）
-
----
-
-## ✅ 项目开发完成确认 (2026-03-16)
-
-### 协作功能完整实现
-
-所有协作功能已完整实现并测试通过：
-
-**后端实现:**
-- ✅ WebSocket 实时协作 (`/ws/collaborate/{note_id}`)
-- ✅ 版本历史 API (获取、恢复、比较)
-- ✅ 协作者管理 (添加、移除、权限控制)
-- ✅ 冲突检测与解决机制
-- ✅ 操作转换算法 (Operational Transformation)
-
-**前端实现:**
-- ✅ 实时协作连接管理 (自动重连)
-- ✅ 协作者列表和权限管理 UI
-- ✅ 版本历史查看和恢复
-- ✅ 冲突解决界面
-- ✅ 光标和选区同步
-
-**集成:**
-- ✅ 与现有认证系统兼容
-- ✅ 与富文本编辑器集成
-- ✅ 与 AI 功能兼容
-- ✅ 代码已推送到 GitHub
-
-
----
-
-## ✅ 协作功能完整实现确认 (2026-03-16)
-
-### 实现状态: 100% 完成 ✅ 已完善
-
-协作功能已完整实现、完善并通过验证，包括以下核心模块：
-
-#### 最新更新 (2026-03-16)
-- ✅ **冲突检测自动集成** - 保存笔记时自动检测版本冲突
-- ✅ **冲突解决 UI** - 可视化冲突解决界面，支持三种解决方式
-- ✅ **协作笔记侧边栏** - 独立展示协作笔记列表
-- ✅ **远程光标样式** - 8种颜色区分不同协作者
-
-#### 1. WebSocket 实时协作
-- **文件**: `app/websocket.py` (491 行)
-- **功能**:
-  - `CollaborationManager` 类管理所有 WebSocket 连接
-  - 自动重连机制（最多 5 次尝试）
-  - 心跳检测保持连接活跃
-  - 用户加入/离开广播通知
-  - 光标位置实时同步
-  - 选区更新同步
-  - 输入状态指示（正在输入...）
-  - 操作转换算法处理并发编辑冲突
-
-#### 2. 版本历史管理
-- **文件**: `app/database.py` (版本相关函数)
-- **API 端点**:
-  - `GET /api/notes/{id}/versions` - 获取版本历史
-  - `GET /api/notes/{id}/versions/{version_id}` - 获取特定版本详情
-  - `POST /api/notes/{id}/versions/{version_id}/restore` - 恢复到指定版本
-  - `GET /api/notes/{id}/versions/compare` - 比较两个版本差异
-
-#### 3. 协作者管理
-- **文件**: `app/database.py` (协作者相关函数)
-- **API 端点**:
-  - `GET /api/notes/{id}/collaborators` - 获取协作者列表
-  - `POST /api/notes/{id}/collaborators` - 添加协作者
-  - `DELETE /api/notes/{id}/collaborators/{user_id}` - 移除协作者
-  - `GET /api/notes/{id}/collaborators/active` - 获取活跃协作者
-  - `GET /api/collaborated-notes` - 获取协作笔记列表
-- **权限级别**: 只读(read)、读写(write)、管理员(admin)
-
-#### 4. 冲突解决
-- **文件**: `app/database.py` (冲突检测和合并函数)
-- **API 端点**:
-  - `POST /api/notes/{id}/conflict/detect` - 检测编辑冲突
-  - `POST /api/notes/{id}/conflict/resolve` - 解决冲突
-- **解决方式**: 使用我的版本 / 使用服务器版本 / 合并更改
-
-#### 5. 前端协作模块
-- **文件**: `static/js/collaboration.js` (715 行)
-- **类**:
-  - `CollaborationManager` - WebSocket 连接管理、自动重连、状态指示
-  - `VersionHistoryManager` - 版本历史加载、渲染、预览、恢复
-  - `CollaboratorsManager` - 协作者添加/移除/权限管理
-  - `ConflictResolutionManager` - 冲突检测、解决 UI、合并编辑
-
-#### 6. 数据库模型
-- **模型**:
-  - `NoteVersion` - 版本历史记录
-  - `NoteCollaborator` - 协作者关系
-  - `CollaborationSession` - 活跃协作会话
-
-### 验证结果
-```
-✅ 数据库协作模型和函数
-✅ WebSocket 协作模块
-✅ 协作相关 Pydantic 模型
-✅ FastAPI 应用包含 12 个协作相关路由
-✅ WebSocket 路由 /ws/collaborate/{note_id}
-✅ 前端协作模块 (25142 bytes)
-```
-
-### 技术栈
-- **后端**: FastAPI + WebSocket + SQLAlchemy
-- **实时通信**: WebSocket (原生 JavaScript WebSocket API)
-- **冲突解决**: Operational Transformation 算法
-- **前端**: 原生 JavaScript (ES6+ Classes)
-
-
----
-
-## ✅ 富文本编辑器功能验证报告 (2026-03-16)
-
-### 实现状态: 100% 完成 ✅
-
-富文本编辑器功能已完整实现，包含以下核心模块：
-
-#### 1. 后端 API 实现
-
-| 方法 | 路径 | 功能 | 状态 |
-|------|------|------|------|
-| POST | `/api/upload/image` | 图片上传（JPG/PNG/GIF/WebP/SVG，最大 10MB） | ✅ |
-| POST | `/api/upload/attachment` | 附件上传（PDF/Word/Excel/PPT/TXT，最大 50MB） | ✅ |
-| GET | `/api/notes/{id}/attachments` | 获取笔记附件列表 | ✅ |
-| PUT | `/api/notes/{id}/attachments` | 更新笔记附件关联 | ✅ |
-| DELETE | `/api/attachments/{id}` | 删除附件 | ✅ |
-
-#### 2. 数据库模型
-
-- ✅ `Attachment` 模型 - 完整的附件信息存储（文件名、大小、MIME类型、图片尺寸等）
-- ✅ `create_attachment()` - 创建附件记录
-- ✅ `get_attachment()` - 获取附件详情
-- ✅ `get_note_attachments()` - 获取笔记附件列表
-- ✅ `delete_attachment()` - 删除附件
-
-#### 3. 前端编辑器 (TipTap.js v2.2+)
-
-- ✅ **三种编辑模式**：富文本编辑、实时预览、Markdown 源码无缝切换
-- ✅ **图片上传**：点击上传 + 拖拽上传
-- ✅ **附件管理**：上传、列表显示、删除
-- ✅ **撤销/重做**：工具栏按钮 + 快捷键 (Ctrl+Z/Ctrl+Y)
-- ✅ **表格编辑**：插入表格、右键上下文菜单调整行列
-- ✅ **任务列表**：可勾选任务项，支持嵌套
-- ✅ **代码高亮**：highlight.js 集成
-- ✅ **Markdown 双向转换**：Turndown.js + Marked.js
-- ✅ **自动保存**：每30秒自动保存到 localStorage
-- ✅ **字数统计**：实时显示字数和字符数
-
-#### 4. 静态文件服务
-
-- ✅ `/uploads` 目录已配置为静态文件服务
-- ✅ 上传的文件可通过 `/uploads/{filename}` 访问
-
-#### 5. 集成验证
-
-- ✅ 与认证系统兼容 - 所有上传 API 需要登录
-- ✅ 与 AI 功能兼容 - 自动摘要和标签生成正常工作
-- ✅ 与分享功能兼容 - 分享笔记包含附件
-- ✅ 与协作功能兼容 - 协作编辑支持富文本内容
-
-### 文件变更清单
-
-| 文件 | 说明 |
-|------|------|
-| `app/main.py` | 上传相关 API 端点 (image, attachment) |
-| `app/database.py` | Attachment 模型和 CRUD 操作 |
-| `app/schemas.py` | 上传响应模型 (ImageUploadResponse, AttachmentUploadResponse) |
-| `app/config.py` | 上传配置 (ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES, MAX_UPLOAD_SIZE) |
-| `static/js/editor.js` | TipTap 编辑器实现 (911 行) |
-| `static/js/app.js` | 编辑器初始化集成 |
-| `static/css/editor.css` | 编辑器样式 (747 行) |
-| `templates/index.html` | 编辑器界面集成 |
-
-### 技术栈
-
-- **富文本编辑器**: TipTap.js v2.2+ (基于 ProseMirror)
-- **Markdown 转换**: Turndown.js (HTML→Markdown) + Marked.js (Markdown→HTML)
-- **代码高亮**: highlight.js
-- **文件上传**: FastAPI UploadFile
-- **静态文件**: FastAPI StaticFiles
-
-
----
-
-## ✅ 协作功能最终确认 (2026-03-16)
-
-### 实现状态: 100% 完成 ✅
-
-所有协作功能已完整实现、测试并部署：
-
-#### 1. WebSocket 实时协作
-- ✅ `CollaborationManager` 类 - 完整的 WebSocket 连接管理
-- ✅ 自动重连机制 - 最多 5 次重连尝试
-- ✅ 心跳检测 - 保持连接活跃
-- ✅ 用户加入/离开广播通知
-- ✅ 光标位置实时同步
-- ✅ 选区更新同步
-- ✅ 输入状态指示（正在输入...）
-- ✅ 操作转换算法处理并发编辑冲突
-
-#### 2. 版本历史管理
-- ✅ `GET /api/notes/{id}/versions` - 获取版本历史
-- ✅ `GET /api/notes/{id}/versions/{version_id}` - 获取特定版本详情
-- ✅ `POST /api/notes/{id}/versions/{version_id}/restore` - 恢复到指定版本
-- ✅ `GET /api/notes/{id}/versions/compare` - 比较两个版本差异
-- ✅ 自动版本创建（创建/编辑笔记时）
-
-#### 3. 协作者管理
-- ✅ `GET /api/notes/{id}/collaborators` - 获取协作者列表
-- ✅ `POST /api/notes/{id}/collaborators` - 添加协作者
-- ✅ `DELETE /api/notes/{id}/collaborators/{user_id}` - 移除协作者
-- ✅ `GET /api/notes/{id}/collaborators/active` - 获取活跃协作者
-- ✅ `GET /api/collaborated-notes` - 获取协作笔记列表
-- ✅ 权限级别控制（read/write/admin）
-
-#### 4. 冲突解决
-- ✅ `POST /api/notes/{id}/conflict/detect` - 检测编辑冲突
-- ✅ `POST /api/notes/{id}/conflict/resolve` - 解决冲突
-- ✅ 支持三种解决方式：使用我的版本 / 使用服务器版本 / 合并更改
-- ✅ 基于版本号的冲突检测
-
-#### 5. 前端协作模块
-- ✅ `CollaborationManager` 类 - WebSocket 连接管理、自动重连、状态指示
-- ✅ `VersionHistoryManager` 类 - 版本历史加载、渲染、预览、恢复
-- ✅ `CollaboratorsManager` 类 - 协作者添加/移除/权限管理
-- ✅ `ConflictResolutionManager` 类 - 冲突检测、解决 UI、合并编辑
-
-#### 6. 数据库模型
-- ✅ `NoteVersion` - 版本历史记录
-- ✅ `NoteCollaborator` - 协作者关系
-- ✅ `CollaborationSession` - 活跃协作会话
-
-### 技术栈
-- **后端**: FastAPI + WebSocket + SQLAlchemy
-- **实时通信**: WebSocket (原生 JavaScript WebSocket API)
-- **冲突解决**: Operational Transformation 算法
-- **前端**: 原生 JavaScript (ES6+ Classes)
-
-
-
----
-
-## ✅ 富文本编辑器功能增强 (2026-03-17)
-
-### 新增功能
-
-#### 图片上传增强
-- **粘贴上传** - 支持从剪贴板直接粘贴图片（截图后 Ctrl+V）
-- **拖拽上传** - 支持拖拽图片文件到编辑器区域
-- **多方式插入** - 支持本地上传、URL 插入两种方式
-
-#### 链接插入增强
-- **模态框输入** - 使用链接插入模态框，体验更友好
-- **自动检测选区** - 自动识别选中的文字作为链接文字
-- **快捷键支持** - Ctrl+K 快速打开链接插入模态框
-
-#### 撤销重做增强
-- **视觉反馈** - 工具栏按钮根据可撤销/重做状态自动更新
-- **快捷键提示** - 按钮悬停显示快捷键提示
-- **完整历史栈** - 支持最多 100 步操作历史
-
-### API 端点
-
-#### 文件上传
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/upload/image` | 上传图片（JPG/PNG/GIF/WebP/SVG，最大 10MB） |
-| POST | `/api/upload/attachment` | 上传附件（PDF/Word/Excel/PPT/TXT，最大 50MB） |
-| GET | `/api/notes/{id}/attachments` | 获取笔记附件列表 |
-| PUT | `/api/notes/{id}/attachments` | 更新笔记附件关联 |
-| DELETE | `/api/attachments/{id}` | 删除附件 |
-
-### 文件变更
-- `static/js/editor.js` - 增强编辑器功能
-- `static/css/editor.css` - 完善工具栏样式
-
----
-
-## ✅ 富文本编辑器最终实现确认 (2026-03-17)
-
-### 实现状态: 100% 完成 ✅
-
-富文本编辑器功能已完整实现并通过全面验证：
-
-#### 后端 API 实现
-| 方法 | 路径 | 功能 | 状态 |
-|------|------|------|------|
-| POST | `/api/upload/image` | 图片上传（JPG/PNG/GIF/WebP/SVG，最大 10MB） | ✅ |
-| POST | `/api/upload/attachment` | 附件上传（PDF/Word/Excel/PPT/TXT，最大 50MB） | ✅ |
-| GET | `/api/notes/{id}/attachments` | 获取笔记附件列表 | ✅ |
-| PUT | `/api/notes/{id}/attachments` | 更新笔记附件关联 | ✅ |
-| DELETE | `/api/attachments/{id}` | 删除附件 | ✅ |
-
-#### 前端编辑器功能 (TipTap.js v2.2+)
-- ✅ **三种编辑模式** - 富文本编辑、实时预览、Markdown 源码无缝切换
-- ✅ **图片上传** - 点击上传 + 拖拽上传 + 粘贴上传（JPG/PNG/GIF/WebP/SVG，最大 10MB）
-- ✅ **附件管理** - 支持 PDF/Word/Excel/PPT/TXT/视频/音频（最大 50MB）
-- ✅ **撤销/重做** - 工具栏按钮 + 快捷键（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z）
-- ✅ **表格编辑** - 插入表格、右键上下文菜单（添加/删除行列、切换表头）
-- ✅ **任务列表** - 可勾选任务项，支持嵌套
-- ✅ **代码高亮** - 集成 highlight.js 语法高亮
-- ✅ **Markdown 双向转换** - Turndown.js (HTML→Markdown) + Marked.js (Markdown→HTML)
-- ✅ **自动保存** - 每30秒自动保存到 localStorage，支持内容恢复提示
-- ✅ **字数统计** - 实时显示字数和字符数
-- ✅ **链接插入** - 模态框输入，支持快捷键 Ctrl+K
-
-#### 集成验证
-- ✅ 与认证系统兼容 - 所有上传 API 需要登录
-- ✅ 与 AI 功能兼容 - 自动摘要和标签生成正常工作
-- ✅ 与分享功能兼容 - 分享笔记包含附件
-- ✅ 与协作功能兼容 - 协作编辑支持富文本内容
-
----
-
 Made with ❤️ using FastAPI + OpenAI + TipTap.js
-
----
-
-## 🔄 协作功能详情
-
-### WebSocket 实时协作
-- **多人同时编辑**: 支持多个用户同时编辑同一笔记
-- **操作转换 (OT)**: 使用操作转换算法处理并发编辑冲突
-- **光标同步**: 实时显示其他用户的光标位置
-- **选区高亮**: 显示其他用户的文本选择
-- **输入状态**: 显示"正在输入..."状态指示
-- **自动重连**: 连接断开后自动重连（最多5次尝试）
-
-### 版本历史
-- **自动版本记录**: 每次保存自动创建新版本
-- **版本对比**: 比较任意两个版本的差异
-- **版本恢复**: 一键恢复到任意历史版本
-- **变更追踪**: 记录变更类型（创建/编辑/恢复/合并）
-
-### 冲突解决
-- **智能冲突检测**: 基于版本号的冲突检测机制
-- **三种解决方式**:
-  - 使用我的版本
-  - 使用服务器版本
-  - 合并更改（手动编辑）
-
-### 协作者管理
-- **添加协作者**: 通过用户名添加协作者
-- **权限级别**:
-  - 只读 (read): 只能查看不能编辑
-  - 读写 (write): 可以编辑笔记
-  - 管理员 (admin): 可以管理协作者和删除笔记
-- **在线状态**: 实时显示协作者在线状态
-
-
----
-
-## ✅ 协作功能最终确认 (2026-03-17)
-
-所有协作功能已完整实现、测试并通过验证。
-
-### 实现的功能
-
-1. **WebSocket 实时协作** - 多用户同时编辑、操作转换、自动重连
-2. **版本历史管理** - 自动版本记录、版本比较、版本恢复
-3. **协作者管理** - 添加/移除协作者、权限控制（只读/读写/管理员）
-4. **冲突解决** - 冲突检测、三种解决方式（我的版本/服务器版本/合并）
-5. **前端协作模块** - 完整的 UI 集成（协作管理、版本历史、冲突解决模态框）
-
-### 技术栈
-- **后端**: FastAPI + WebSocket + SQLAlchemy
-- **实时通信**: WebSocket (原生 JavaScript WebSocket API)
-- **冲突解决**: Operational Transformation 算法
-- **前端**: 原生 JavaScript (ES6+ Classes)
-
----
-
-
----
-
-## ✅ 富文本编辑器功能实现确认 (2026-03-20)
-
-### 实现状态: 100% 完成 ✅
-
-富文本编辑器功能已完整实现，包含以下核心模块：
-
-#### 1. 后端 API 实现
-
-| 方法 | 路径 | 功能 | 状态 |
-|------|------|------|------|
-| POST | `/api/upload/image` | 图片上传（JPG/PNG/GIF/WebP/SVG，最大 10MB） | ✅ |
-| POST | `/api/upload/attachment` | 附件上传（PDF/Word/Excel/PPT/TXT，最大 50MB） | ✅ |
-| GET | `/api/notes/{id}/attachments` | 获取笔记附件列表 | ✅ |
-| PUT | `/api/notes/{id}/attachments` | 更新附件关联 | ✅ |
-| DELETE | `/api/attachments/{id}` | 删除附件 | ✅ |
-
-#### 2. 数据库模型
-
-- ✅ `Attachment` 模型 - 完整的附件信息存储
-- ✅ 文件元数据（文件名、大小、MIME类型、图片尺寸等）
-- ✅ CRUD 操作函数
-
-#### 3. 前端编辑器 (TipTap.js v2.2+)
-
-- ✅ **三种编辑模式**：富文本编辑、实时预览、Markdown 源码
-- ✅ **图片上传**：拖拽上传 + 点击上传 + 粘贴上传
-- ✅ **附件管理**：上传、列表显示、删除
-- ✅ **撤销/重做**：工具栏按钮 + 快捷键 (Ctrl+Z/Ctrl+Y)
-- ✅ **表格编辑**：插入表格、右键上下文菜单调整行列
-- ✅ **任务列表**：可勾选任务项，支持嵌套
-- ✅ **代码高亮**：highlight.js 集成
-- ✅ **Markdown 双向转换**：Turndown.js + Marked.js
-- ✅ **自动保存**：每30秒自动保存到 localStorage
-- ✅ **字数统计**：实时显示字数和字符数
-
-#### 4. 测试覆盖
-
-```bash
-$ pytest tests/ -v
-
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_endpoint_exists PASSED
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_invalid_format PASSED
- tests/test_rich_text_editor.py::TestAttachmentUpload::test_upload_attachment_endpoint_exists PASSED
-tests/test_rich_text_editor.py::TestAttachmentUpload::test_get_note_attachments_endpoint_exists PASSED
-tests/test_rich_text_editor.py::TestEditorAPI::test_markdown_preview_endpoint PASSED
-tests/test_rich_text_editor.py::TestEditorAPI::test_editor_static_files PASSED
-tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor PASSED
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_success PASSED
-tests/test_rich_text_editor.py::TestAttachmentUpload::test_upload_attachment_success PASSED
-tests/test_rich_text_editor.py::TestAttachmentUpload::test_update_note_attachments PASSED
-tests/test_rich_text_editor.py::TestAttachmentUpload::test_delete_attachment PASSED
-tests/test_rich_text_editor.py::TestContentHtmlStorage::test_create_note_with_content_html PASSED
-tests/test_rich_text_editor.py::TestContentHtmlStorage::test_update_note_with_content_html PASSED
-tests/test_rich_text_editor.py::TestContentHtmlStorage::test_share_page_uses_content_html PASSED
-
-======================= 24 passed in 116.82s =======================
-```
-
-#### 5. 代码提交
-
-- ✅ 所有代码已提交到 Git 仓库
-- ✅ 已推送到远程仓库 (origin/main)
-
----
-
-## 📝 富文本编辑器实现状态 (2026-03-27)
-
-### 已实现功能
-
-#### 核心编辑器
-- ✅ **TipTap.js v2.2+ 集成** - 基于 ProseMirror 的现代化编辑器
-- ✅ **三种编辑模式** - 富文本编辑、实时预览、Markdown 源码
-- ✅ **撤销重做** - 工具栏按钮 + 快捷键 (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
-- ✅ **自动保存** - 每30秒自动保存到 localStorage
-- ✅ **字数统计** - 实时显示字数和字符数
-
-#### 媒体支持
-- ✅ **图片上传** - 拖拽上传、点击上传、粘贴上传、URL 插入
-  - 支持格式：JPG、PNG、GIF、WebP、SVG
-  - 最大文件大小：10MB
-- ✅ **附件管理** - 多文件上传、列表显示、删除
-  - 支持格式：PDF、Word、Excel、PPT、TXT、视频、音频
-  - 最大文件大小：50MB
-
-#### 排版工具
-- ✅ **表格编辑** - 插入表格、添加/删除行列、切换表头、右键上下文菜单
-- ✅ **任务列表** - 可勾选的任务项，支持嵌套
-- ✅ **代码高亮** - 集成 highlight.js 语法高亮
-- ✅ **6级标题**、粗体、斜体、删除线、高亮、引用、分隔线
-
-#### 高级功能
-- ✅ **数学公式** - KaTeX 集成，支持 LaTeX 行内和块级公式
-- ✅ **图表绘制** - Mermaid 集成，支持流程图、序列图、甘特图等
-- ✅ **表情符号** - emoji-picker-element 集成
-- ✅ **Markdown 双向转换** - Turndown.js + Marked.js
-
-#### 后端 API
-- ✅ `POST /api/upload/image` - 图片上传
-- ✅ `POST /api/upload/attachment` - 附件上传
-- ✅ `GET /api/notes/{id}/attachments` - 获取附件列表
-- ✅ `PUT /api/notes/{id}/attachments` - 更新附件关联
-- ✅ `DELETE /api/attachments/{id}` - 删除附件
-- ✅ `POST /api/preview` - Markdown 转 HTML 预览
-
-### 文件变更
-| 文件 | 说明 |
-|------|------|
-| `app/main.py` | 上传相关 API 端点 (2082 行) |
-| `app/database.py` | Attachment 模型和 CRUD 操作 |
-| `app/schemas.py` | 上传响应模型 |
-| `static/js/editor.js` | TipTap 编辑器实现 (1136 行) |
-| `static/css/editor.css` | 编辑器样式 (885 行) |
-| `templates/index.html` | 编辑器界面集成 (737 行) |
-
-### 测试覆盖
-```bash
-$ pytest tests/ -v
-============================= test session starts ==============================
-collected 24 items
-
-tests/test_collaboration.py::TestCollaborationAPI::test_version_history_endpoints_exist PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_collaborator_endpoints_exist PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_conflict_endpoints_exist PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_collaborated_notes_endpoint PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_websocket_endpoint_exists PASSED
-tests/test_collaboration.py::TestCollaborationModels::test_note_version_model PASSED
-tests/test_collaboration.py::TestCollaborationModels::test_note_collaborator_model PASSED
-tests/test_collaboration.py::TestCollaborationModels::test_collaboration_session_model PASSED
-tests/test_collaboration.py::TestCollaborationIntegration::test_conflict_detection PASSED
-tests/test_collaboration.py::TestCollaborationIntegration::test_merge_changes PASSED
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_endpoint_exists PASSED
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_invalid_format PASSED
-tests/test_rich_text_editor.py::TestAttachmentUpload::test_upload_attachment_endpoint_exists PASSED
-tests/test_rich_text_editor.py::TestAttachmentUpload::test_get_note_attachments_endpoint_exists PASSED
-tests/test_rich_text_editor.py::TestEditorAPI::test_markdown_preview_endpoint PASSED
-tests/test_rich_text_editor.py::TestEditorAPI::test_editor_static_files PASSED
-tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor PASSED
-
-======================= 24 passed in 19.94s =======================
-```
-
-### 状态
-**✅ 富文本编辑器功能完整实现，所有测试通过，已上线**
-
----
-
-## ✅ 富文本编辑器最终更新 (2026-03-29)
-
-### 本次更新内容
-1. **TipTap CDN 全局变量修复**
-   - 修复 `@tiptap/*` UMD 构建挂载在 `window["@tiptap/..."]` 下导致编辑器初始化失败的问题。
-   - 在 `templates/index.html` 增加映射脚本，桥接到 `editor.js` 预期的 `window.tiptap`、`window.tiptapImage` 等变量，确保 TipTap 编辑器正常初始化。
-   - 移除无效的 `lowlight@3.1.0` CDN 链接（无 UMD 构建，返回 404）并清理未使用的 `extension-code-block-lowlight` 引用。
-2. **API 健壮性增强**: 为 `PUT /api/notes/{id}/attachments` 端点的 `attachment_ids` 参数显式添加 `Body(...)` 注解，确保请求体解析更加可靠。
-3. **测试覆盖增强**: 将富文本编辑器相关测试从 7 个扩展到 11 个，新增：
-   - 图片实际上传成功测试
-   - 附件实际上传成功测试
-   - 附件与笔记关联更新测试
-   - 附件删除测试
-4. **全量回归**: 所有 26 个测试用例通过，无破坏性变更。
-
-### 测试结果
-```bash
-$ pytest tests/ -v
-============================= test session starts ==============================
-collected 21 items
-
-tests/test_collaboration.py::TestCollaborationAPI::test_version_history_endpoints_exist PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_collaborator_endpoints_exist PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_conflict_endpoints_exist PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_collaborated_notes_endpoint PASSED
-tests/test_collaboration.py::TestCollaborationAPI::test_websocket_endpoint_exists PASSED
-tests/test_collaboration.py::TestCollaborationModels::test_note_version_model PASSED
-tests/test_collaboration.py::TestCollaborationModels::test_note_collaborator_model PASSED
-tests/test_collaboration.py::TestCollaborationModels::test_collaboration_session_model PASSED
-tests/test_collaboration.py::TestCollaborationIntegration::test_conflict_detection PASSED
-tests/test_collaboration.py::TestCollaborationIntegration::test_merge_changes PASSED
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_endpoint_exists PASSED
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_success PASSED
-tests/test_rich_text_editor.py::TestImageUpload::test_upload_image_invalid_format PASSED
-tests/test_attachment_upload.py::TestAttachmentUpload::test_upload_attachment_endpoint_exists PASSED
-tests/test_attachment_upload.py::TestAttachmentUpload::test_upload_attachment_success PASSED
-tests/test_attachment_upload.py::TestAttachmentUpload::test_get_note_attachments_endpoint_exists PASSED
-tests/test_attachment_upload.py::TestAttachmentUpload::test_update_note_attachments PASSED
-tests/test_attachment_upload.py::TestAttachmentUpload::test_delete_attachment PASSED
-tests/test_rich_text_editor.py::TestEditorAPI::test_markdown_preview_endpoint PASSED
-tests/test_rich_text_editor.py::TestEditorAPI::test_editor_static_files PASSED
-tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor PASSED
-
-====================== 21 passed in 52.62s ======================
-```
-
-**状态: ✅ 富文本编辑器功能完整实现并经过增强验证，所有测试通过，已提交代码**
-
----
-
-## 📝 最近更新
-
-### 2026-03-31
-- ✅ 富文本编辑器功能完整实现并通过最终验证
-  - 集成 TipTap.js v2.2+ (ProseMirror) 富文本编辑器，支持三种编辑模式
-  - 图片上传功能完整：支持点击上传、拖拽上传、剪贴板粘贴（JPG/PNG/GIF/WebP/SVG，最大 10MB）
-  - 附件管理功能完整：支持 PDF/Word/Excel/PPT/TXT/视频/音频等，最大 50MB
-  - 撤销重做功能完整：TipTap History 扩展 + 工具栏按钮 + 快捷键（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z）
-  - 所有 26 个测试用例通过（16 个编辑器 + 10 个协作）
-  - README.md 和 DEVELOPMENT.md 文档已更新
-
-### 2026-03-30
-- ✅ 富文本编辑器支持双模式内容存储：同时保存 Markdown (`content`) 和 HTML (`content_html`)
-  - `Note` 和 `NoteVersion` 模型新增 `content_html` 字段，完整保留 TipTap 编辑器的 HTML 格式
-  - 创建/更新/恢复笔记时同步保存 HTML，分享页面优先渲染 HTML，无 HTML 时自动降级为 Markdown 转换
-  - 前端加载笔记时优先使用 `content_html` 还原编辑器状态，避免 Markdown↔HTML 反复转换导致的格式损耗
-  - API 请求/响应模型 (`NoteCreateRequest`, `NoteUpdateRequest`, `NoteResponse`, `VersionResponse`) 均已支持 `content_html`
-- ✅ 版本历史、冲突解决、协作编辑等模块完整兼容 `content_html`，恢复版本时一同还原 HTML 内容
-- ✅ 所有 26 个测试用例通过，向后兼容无 HTML 内容的历史笔记
-
-### 2026-03-29
-- ✅ 修复 TipTap.js UMD CDN 全局变量映射问题，确保编辑器正常初始化
-- ✅ 移除无效的 lowlight CDN 链接，清理未使用的 code-block-lowlight 引用
-- ✅ 完善富文本编辑器的图片上传与笔记关联机制
-- ✅ 附件与图片在保存笔记时自动关联到数据库，删除笔记时同步清理文件
-- ✅ 支持通过工具栏、拖拽、粘贴三种方式上传图片，全部纳入附件管理
-- ✅ 撤销重做功能完整可用（工具栏按钮 + Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z）
