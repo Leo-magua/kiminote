@@ -3,7 +3,58 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-31 07:30
+> 最后更新：2026-03-31 10:30
+
+---
+
+## 🎉 富文本编辑器增强功能完成 (2026-03-31)
+
+### 新增功能
+
+#### 1. 代码块语言选择器 ✅
+- **支持 30+ 编程语言**：JavaScript, Python, Java, C++, Go, Rust, TypeScript 等
+- **前端实现**：通过模态框选择代码块语言
+- **语法高亮**：与 highlight.js 集成，支持语言特定的高亮
+- **文件修改**：
+  - `static/js/editor.js` - 添加 `promptCodeBlock()` 和 `insertCodeBlock()` 方法
+  - `templates/index.html` - 添加代码块模态框
+  - `static/js/app.js` - 添加代码块插入事件处理
+
+#### 2. 全屏编辑模式 ✅
+- **F11 快捷键**：一键进入/退出全屏模式
+- **Esc 键退出**：在全屏模式下按 Esc 可退出
+- **沉浸式写作体验**＜隐藏其他界面元素，专注于写作
+- **文件修改**：
+  - `static/css/editor.css` - 添加 `.editor-container.fullscreen` 样式
+  - `templates/index.html` - 添加全屏按钮
+  - `static/js/app.js` - 添加 `toggleFullscreen()` 函数和键盘事件
+
+#### 3. 查找替换功能 ✅
+- **Ctrl+F 快捷键**：快速打开查找替换对话框
+- **查找功能**：支持从当前光标位置开始查找，循环查找
+- **替换功能**：单个替换或全部替换
+- **大小写敏感**：可选择是否区分大小写
+- **文件修改**：
+  - `static/js/editor.js` - 添加 `findNext()`, `replaceOne()`, `replaceAll()` 方法
+  - `templates/index.html` - 添加查找替换模态框
+  - `static/js/app.js` - 添加查找替换事件处理
+
+### 测试结果
+- 所有现有测试仍通过：24/24 测试通过
+- 无回退兼容性问题
+
+### 代码提交
+```bash
+git add -A
+git commit -m "feat: 添加富文本编辑器增强功能
+
+- 添加代码块语言选择器，支持 30+ 编程语言
+- 添加全屏编辑模式，支持 F11 快捷键
+- 添加查找替换功能，支持区分大小写
+- 更新 README.md 和 DEVELOPMENT.md 文档
+
+测试: 24 passed, 0 failed"
+```
 
 ---
 

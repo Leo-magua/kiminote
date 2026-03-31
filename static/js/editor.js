@@ -200,7 +200,7 @@ class RichTextEditor {
                 editor.commands.toggleCode();
                 break;
             case 'codeBlock':
-                editor.commands.toggleCodeBlock();
+                this.promptCodeBlock();
                 break;
             case 'blockquote':
                 editor.commands.toggleBlockquote();
@@ -984,6 +984,125 @@ class RichTextEditor {
     replaceSelection(content) {
         if (this.editor) {
             this.editor.chain().focus().insertContent(content).run();
+        }
+    }
+
+    // ========== Find and Replace Methods ==========
+    findAndReplaceModal() {
+        const modal = document.getElementById('findReplaceModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.getElementById('findText')?.focus();
+        }
+    }
+
+    findNext(text, caseSensitive = false) {
+        if (!this.editor || !text) return null;
+        
+        const content = this.editor.state.doc.textContent;
+        const searchText = caseSensitive ? text : text.toLowerCase();
+        const searchContent = caseSensitive ? content : content.toLowerCase();
+        
+        const { from, to } = this.editor.state.selection;
+        const startPos = Math.max(from, to);
+        
+        let index = searchContent.indexOf(searchText, startPos);
+        if (index === -1) {
+            // Wrap around to beginning
+            index = searchContent.indexOf(searchText, 0);
+        }
+        
+        if (index !== -1) {
+            this.editor.chain().focus().setTextSelection({
+                from: index,
+                to: index + text.length
+            }).run();
+            return index;
+        }
+        return null;
+    }
+
+    replaceOne(searchText, replaceText, caseSensitive = false) {
+        if (!this.editor || !searchText) return false;
+        
+        const { from, to } = this.editor.state.selection;
+        const selectedText = this.editor.state.doc.textBetween(from, to);
+        
+        const compareSelected = caseSensitive ? selectedText : selectedText.toLowerCase();
+        const compareSearch = caseSensitive ? searchText : searchText.toLowerCase();
+        
+        if (compareSelected === compareSearch) {
+            this.editor.chain().focus().insertContent(replaceText).run();
+            return true;
+        } else {
+            // Find next occurrence first
+            return this.findNext(searchText, caseSensitive) !== null;
+        }
+    }
+
+    replaceAll(searchText, replaceText, caseSensitive = false) {
+        if (!this.editor || !searchText) return 0;
+        
+        let content = this.editor.getHTML();
+        const originalContent = content;
+        let count = 0;
+        
+        if (caseSensitive) {
+            count = (content.match(new RegExp(this.escapeRegex(searchText), 'g')) || []).length;
+            content = content.replace(new RegExp(this.escapeRegex(searchText), 'g'), replaceText);
+        } else {
+            const regex = new RegExp(this.escapeRegex(searchText), 'gi');
+            count = (content.match(regex) || []).length;
+            content = content.replace(regex, replaceText);
+        }
+        
+        if (count > 0) {
+            this.editor.commands.setContent(content);
+        }
+        
+        return count;
+    }
+
+    escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // ========== Code Block Methods ==========
+    promptCodeBlock() {
+        const modal = document.getElementById('codeBlockModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            const select = document.getElementById('codeLanguageSelect');
+            if (select) {
+                select.value = 'javascript';
+                select.focus();
+            }
+        } else {
+            // Fallback: toggle code block directly
+            this.editor.chain().focus().toggleCodeBlock().run();
+        }
+    }
+
+    insertCodeBlock(language) {
+        if (!this.editor) return;
+        
+        // Insert code block with language class
+        this.editor.chain().focus()
+            .insertContent({
+                type: 'codeBlock',
+                attrs: {
+                    language: language
+                },
+                content: [{
+                    type: 'text',
+                    text: ''
+                }]
+            })
+            .run();
+        
+        // Show success notification
+        if (typeof showToast === 'function') {
+            showToast(`已插入 ${language} 代码块`);
         }
     }
 

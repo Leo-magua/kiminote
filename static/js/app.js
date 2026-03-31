@@ -1959,6 +1959,113 @@ document.getElementById('uploadAttachmentBtn')?.addEventListener('click', handle
 document.getElementById('mdExportBtn')?.addEventListener('click', handleMarkdownExport);
 document.getElementById('mdImportBtn')?.addEventListener('click', handleMarkdownImport);
 
+// Find and Replace
+const findReplaceBtn = document.getElementById('findReplaceBtn');
+if (findReplaceBtn) {
+    findReplaceBtn.addEventListener('click', () => {
+        if (richTextEditor) {
+            richTextEditor.findAndReplaceModal();
+        }
+    });
+}
+
+// Find and Replace modal actions
+document.getElementById('findNextBtn')?.addEventListener('click', () => {
+    const findText = document.getElementById('findText')?.value || '';
+    const caseSensitive = document.getElementById('caseSensitive')?.checked || false;
+    const resultDiv = document.getElementById('findResult');
+    
+    if (richTextEditor && findText) {
+        const found = richTextEditor.findNext(findText, caseSensitive);
+        if (resultDiv) {
+            resultDiv.textContent = found !== null ? '找到匹配项' : '未找到匹配项';
+            resultDiv.style.color = found !== null ? 'var(--success)' : 'var(--danger)';
+        }
+    }
+});
+
+document.getElementById('replaceOneBtn')?.addEventListener('click', () => {
+    const findText = document.getElementById('findText')?.value || '';
+    const replaceText = document.getElementById('replaceText')?.value || '';
+    const caseSensitive = document.getElementById('caseSensitive')?.checked || false;
+    const resultDiv = document.getElementById('findResult');
+    
+    if (richTextEditor && findText) {
+        const replaced = richTextEditor.replaceOne(findText, replaceText, caseSensitive);
+        if (resultDiv) {
+            resultDiv.textContent = replaced ? '已替换' : '未找到匹配项';
+            resultDiv.style.color = replaced ? 'var(--success)' : 'var(--danger)';
+        }
+    }
+});
+
+document.getElementById('replaceAllBtn')?.addEventListener('click', () => {
+    const findText = document.getElementById('findText')?.value || '';
+    const replaceText = document.getElementById('replaceText')?.value || '';
+    const caseSensitive = document.getElementById('caseSensitive')?.checked || false;
+    const resultDiv = document.getElementById('findResult');
+    
+    if (richTextEditor && findText) {
+        const count = richTextEditor.replaceAll(findText, replaceText, caseSensitive);
+        if (resultDiv) {
+            resultDiv.textContent = count > 0 ? `已替换 ${count} 处` : '未找到匹配项';
+            resultDiv.style.color = count > 0 ? 'var(--success)' : 'var(--danger)';
+        }
+    }
+});
+
+// Ctrl+F for find
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        if (!elements.noteEditView.classList.contains('hidden') && richTextEditor) {
+            richTextEditor.findAndReplaceModal();
+        }
+    }
+});
+
+// Fullscreen editing
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+}
+
+function toggleFullscreen() {
+    const editorContainer = document.querySelector('.editor-container');
+    if (!editorContainer) return;
+
+    const isFullscreen = editorContainer.classList.toggle('fullscreen');
+    
+    // Update button icon
+    if (fullscreenBtn) {
+        fullscreenBtn.innerHTML = isFullscreen 
+            ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>'
+            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+        fullscreenBtn.title = isFullscreen ? '退出全屏 (F11)' : '全屏编辑 (F11)';
+    }
+    
+    // Refresh editor layout
+    if (richTextEditor && richTextEditor.editor) {
+        setTimeout(() => {
+            richTextEditor.editor.commands.focus();
+        }, 100);
+    }
+    
+    if (typeof showToast === 'function') {
+        showToast(isFullscreen ? '已进入全屏模式' : '已退出全屏模式');
+    }
+}
+
+// Code Block modal
+document.getElementById('insertCodeBlockBtn')?.addEventListener('click', () => {
+    const select = document.getElementById('codeLanguageSelect');
+    const modal = document.getElementById('codeBlockModal');
+    if (select && richTextEditor) {
+        richTextEditor.insertCodeBlock(select.value);
+        toggleModal(modal, false);
+    }
+});
+
 // Math formula modal
 document.getElementById('insertMathBtn')?.addEventListener('click', () => {
     const input = document.getElementById('mathInput');
@@ -2100,8 +2207,24 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Esc to go back
+    // F11 for fullscreen
+    if (e.key === 'F11') {
+        e.preventDefault();
+        if (!elements.noteEditView.classList.contains('hidden')) {
+            toggleFullscreen();
+        }
+    }
+    
+    // Esc to go back or exit fullscreen
     if (e.key === 'Escape') {
+        const editorContainer = document.querySelector('.editor-container');
+        const isFullscreen = editorContainer?.classList.contains('fullscreen');
+        
+        if (isFullscreen) {
+            toggleFullscreen();
+            return;
+        }
+        
         const openModal = document.querySelector('.modal:not(.hidden)');
         if (openModal) {
             toggleModal(openModal, false);

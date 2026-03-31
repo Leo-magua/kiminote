@@ -865,6 +865,67 @@ emoji-picker {
     color: var(--success);
 }
 
+/* Fullscreen Mode */
+.editor-container.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: var(--bg-primary);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-container.fullscreen .editor-toolbar {
+    flex-shrink: 0;
+}
+
+.editor-container.fullscreen .editor-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.editor-container.fullscreen #editTab,
+.editor-container.fullscreen #previewTab,
+.editor-container.fullscreen #markdownTab {
+    flex: 1;
+    overflow: auto;
+}
+
+.editor-container.fullscreen .rich-editor,
+.editor-container.fullscreen #markdownContent {
+    max-height: none;
+    min-height: auto;
+    height: 100%;
+}
+
+.editor-container.fullscreen .editor-stats-bar {
+    flex-shrink: 0;
+}
+
+/* Code Block Language Indicator */
+.code-block-wrapper {
+    position: relative;
+}
+
+.code-block-language {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 4px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 0 0 0 var(--radius);
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
 /* Print styles */
 @media print {
     .editor-toolbar {
