@@ -110,19 +110,21 @@ class Share(Base):
     note = relationship("Note", back_populates="shares")
     owner = relationship("User", back_populates="shares")
     
-    def is_valid(self) -> bool:
-        """Check if share is valid (active and not expired)"""
-        if not self.is_active:
-            return False
-        if self.expires_at and self.expires_at < datetime.utcnow():
-            return False
-        return True
-    
     def is_expired(self) -> bool:
         """Check if share is expired"""
         if self.expires_at and self.expires_at < datetime.utcnow():
             return True
         return False
+    
+    def is_valid(self) -> bool:
+        """Check if share is still valid (active and not expired)"""
+        if not self.is_active:
+            return False
+        if self.expires_at and self.expires_at < datetime.utcnow():
+            return False
+        if self.max_access and self.access_count >= self.max_access:
+            return False
+        return True
     
     def to_dict(self) -> dict:
         """Convert share to dictionary (exclude sensitive data)"""
@@ -143,16 +145,6 @@ class Share(Base):
             "last_accessed_at": self.last_accessed_at.isoformat() if self.last_accessed_at else None,
             "is_expired": self.is_expired(),
         }
-    
-    def is_valid(self) -> bool:
-        """Check if share is still valid (active and not expired)"""
-        if not self.is_active:
-            return False
-        if self.expires_at and self.expires_at < datetime.utcnow():
-            return False
-        if self.max_access and self.access_count >= self.max_access:
-            return False
-        return True
 
 
 class UserSession(Base):
