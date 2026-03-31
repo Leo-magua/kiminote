@@ -229,6 +229,8 @@ pytest tests/test_collaboration.py -v
 - **富文本编辑器**: TipTap.js v2.2+ (ProseMirror)
 - **Markdown**: Turndown.js + Marked.js
 - **代码高亮**: highlight.js
+- **数学公式**: KaTeX
+- **图表绘制**: Mermaid
 - **AI 集成**: OpenAI API
 - **实时协作**: WebSocket + Operational Transformation
 - **认证**: JWT + HTTP-only Cookie
