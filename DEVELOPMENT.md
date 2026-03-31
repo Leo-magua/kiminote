@@ -3,7 +3,19 @@
 > 监工：OpenClaw Agent  
 > 项目：AI Notes (Kimicode 开发)  
 > 仓库：https://github.com/Leo-magua/kiminote  
-> 最后更新：2026-03-31 13:00
+> 最后更新：2026-03-31 20:30
+
+---
+
+## 🛠️ 附件上传功能完善 (2026-03-31)
+
+### 修复内容
+- **补充视频和音频文件类型的附件上传支持** ✅
+  - `app/config.py` 中新增 `ALLOWED_VIDEO_TYPES` 和 `ALLOWED_AUDIO_TYPES` 常量
+  - 支持格式：MP4、AVI、MOV、WebM（视频）；MP3、WAV、OGG、AAC、FLAC（音频）
+  - `app/main.py` 中 `upload_attachment` 接口已关联使用新的 MIME 类型白名单
+  - 在 `tests/test_rich_text_editor.py` 中新增视频/音频上传测试用例
+  - 全部 26 个测试用例通过，无回退兼容性问题
 
 ---
 

@@ -276,6 +276,38 @@ class TestAttachmentUpload:
         get_response = client.get(f"/api/notes/{note_id}/attachments", headers=headers)
         data = get_response.json()
         assert att2_id not in [a["id"] for a in data["attachments"]]
+    
+    def test_upload_video_attachment(self, auth_token):
+        """Test uploading a video file as attachment"""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        test_file = io.BytesIO(b"fake mp4 video content")
+        
+        response = client.post(
+            "/api/upload/attachment",
+            headers=headers,
+            files={"file": ("video.mp4", test_file, "video/mp4")}
+        )
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        data = response.json()
+        assert data["file_type"] == "video"
+        assert data["mime_type"] == "video/mp4"
+    
+    def test_upload_audio_attachment(self, auth_token):
+        """Test uploading an audio file as attachment"""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        test_file = io.BytesIO(b"fake mp3 audio content")
+        
+        response = client.post(
+            "/api/upload/attachment",
+            headers=headers,
+            files={"file": ("audio.mp3", test_file, "audio/mpeg")}
+        )
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        data = response.json()
+        assert data["file_type"] == "audio"
+        assert data["mime_type"] == "audio/mpeg"
 
 
 class TestEditorAPI:

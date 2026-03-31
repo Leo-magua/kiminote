@@ -33,6 +33,16 @@ ALLOWED_DOCUMENT_TYPES = {
     'text/plain', 'text/markdown', 'text/csv'
 }
 
+ALLOWED_VIDEO_TYPES = {
+    'video/mp4', 'video/avi', 'video/quicktime', 'video/x-msvideo',
+    'video/webm', 'video/mpeg', 'video/ogg'
+}
+
+ALLOWED_AUDIO_TYPES = {
+    'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/webm',
+    'audio/aac', 'audio/flac'
+}
+
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR}/notes.db")
 

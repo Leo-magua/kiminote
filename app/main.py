@@ -49,7 +49,8 @@ md_converter = markdown.Markdown(extensions=MD_EXTENSIONS)
 
 from app.config import (
     APP_NAME, APP_VERSION, EXPORTS_DIR, SESSION_COOKIE_NAME,
-    UPLOADS_DIR, MAX_UPLOAD_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES
+    UPLOADS_DIR, MAX_UPLOAD_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES,
+    ALLOWED_VIDEO_TYPES, ALLOWED_AUDIO_TYPES
 )
 from app.database import (
     get_db, create_note, get_note, get_notes, update_note, 
@@ -2022,8 +2023,8 @@ async def upload_attachment(
     # Validate file type
     mime_type = file.content_type or mimetypes.guess_type(file.filename)[0] or 'application/octet-stream'
     
-    # Allow images and documents
-    allowed_types = ALLOWED_IMAGE_TYPES | ALLOWED_DOCUMENT_TYPES
+    # Allow images, documents, videos, and audio
+    allowed_types = ALLOWED_IMAGE_TYPES | ALLOWED_DOCUMENT_TYPES | ALLOWED_VIDEO_TYPES | ALLOWED_AUDIO_TYPES
     if mime_type not in allowed_types:
         raise HTTPException(
             status_code=400, 

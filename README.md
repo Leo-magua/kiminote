@@ -520,6 +520,8 @@ AI Notes 集成了强大的 **TipTap.js** 富文本编辑器，支持多种编�
 支持格式：
 - 文档：PDF、Word、Excel、PowerPoint、TXT、Markdown
 - 图片：JPG、PNG、GIF、WebP、SVG
+- 视频：MP4、AVI、MOV、WebM
+- 音频：MP3、WAV、OGG、AAC、FLAC
 - 其他：ZIP、JSON 等（最大 50MB）
 
 #### 表格编辑
@@ -835,7 +837,7 @@ Made with ❤️ using FastAPI + OpenAI
 - ✅ TipTap.js v2.2+ 富文本编辑器集成
 - ✅ 三种编辑模式（富文本、预览、Markdown 源码）
 - ✅ 图片上传（点击上传 + 拖拽上传，最大 10MB）
-- ✅ 附件管理（PDF/Word/Excel/PPT/TXT，最大 50MB）
+- ✅ 附件管理（PDF/Word/Excel/PPT/TXT/视频/音频，最大 50MB）
 - ✅ 撤销/重做（工具栏按钮 + 快捷键 Ctrl+Z / Ctrl+Y）
 - ✅ 表格编辑（插入表格、右键菜单调整行列）
 - ✅ 任务列表（可勾选任务项，支持嵌套）
