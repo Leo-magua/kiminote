@@ -811,7 +811,7 @@ MIT License
 - ✅ 与分享功能兼容 - 分享页面优先渲染 HTML 内容
 - ✅ 与协作功能兼容 - 实时协作编辑支持富文本内容
 - ✅ 与版本历史兼容 - 版本恢复正确处理 HTML 内容
-- ✅ 所有 24 个测试用例通过
+- ✅ 所有 26 个测试用例通过
 
 #### 8. 文件清单
 | 文件 | 说明 |
@@ -1455,7 +1455,7 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
    - 附件实际上传成功测试
    - 附件与笔记关联更新测试
    - 附件删除测试
-4. **全量回归**: 所有 24 个测试用例通过，无破坏性变更。
+4. **全量回归**: 所有 26 个测试用例通过，无破坏性变更。
 
 ### 测试结果
 ```bash
@@ -1500,7 +1500,7 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
   - 图片上传功能完整：支持点击上传、拖拽上传、剪贴板粘贴（JPG/PNG/GIF/WebP/SVG，最大 10MB）
   - 附件管理功能完整：支持 PDF/Word/Excel/PPT/TXT/视频/音频等，最大 50MB
   - 撤销重做功能完整：TipTap History 扩展 + 工具栏按钮 + 快捷键（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z）
-  - 所有 24 个测试用例通过（14 个编辑器 + 10 个协作）
+  - 所有 26 个测试用例通过（16 个编辑器 + 10 个协作）
   - README.md 和 DEVELOPMENT.md 文档已更新
 
 ### 2026-03-30
@@ -1510,7 +1510,7 @@ tests/test_rich_text_editor.py::TestEditorFrontend::test_index_page_has_editor P
   - 前端加载笔记时优先使用 `content_html` 还原编辑器状态，避免 Markdown↔HTML 反复转换导致的格式损耗
   - API 请求/响应模型 (`NoteCreateRequest`, `NoteUpdateRequest`, `NoteResponse`, `VersionResponse`) 均已支持 `content_html`
 - ✅ 版本历史、冲突解决、协作编辑等模块完整兼容 `content_html`，恢复版本时一同还原 HTML 内容
-- ✅ 所有 24 个测试用例通过，向后兼容无 HTML 内容的历史笔记
+- ✅ 所有 26 个测试用例通过，向后兼容无 HTML 内容的历史笔记
 
 ### 2026-03-29
 - ✅ 修复 TipTap.js UMD CDN 全局变量映射问题，确保编辑器正常初始化
