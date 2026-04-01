@@ -156,37 +156,70 @@ isort app/ tests/
 
 ## 🎨 富文本编辑器
 
+**状态**: ✅ 完整实现，稳定运行
+
 ### TipTap.js 配置
 
 ```javascript
-// 核心扩展
-- StarterKit: 基础编辑功能
-- Image: 图片支持
-- Table: 表格编辑
-- TaskList/TaskItem: 任务列表
-- Link: 超链接
-- Highlight: 文本高亮
-- Placeholder: 占位符
+// TipTap.js 核心扩展配置
+const extensions = [
+    StarterKit.configure({
+        heading: { levels: [1, 2, 3, 4, 5, 6] },
+        history: { depth: 100, newGroupDelay: 500 }  // 撤销重做配置
+    }),
+    Image.configure({ inline: false, allowBase64: true }),
+    Table.configure({ resizable: true }),
+    TableRow, TableHeader, TableCell,
+    TaskList, TaskItem.configure({ nested: true }),
+    Link.configure({ openOnClick: false }),
+    Highlight, Typography, HorizontalRule,
+    Placeholder.configure({ placeholder: '开始编写笔记内容...' })
+];
 ```
 
 ### 功能清单
 
-- ✅ 三种编辑模式（富文本/预览/Markdown）
-- ✅ TipTap.js v2.2+ 核心集成（ProseMirror 驱动）
-- ✅ 图片上传（拖拽、点击、粘贴、URL 插入）
-- ✅ 附件管理（支持文档、视频、音频，50MB 上限）
-- ✅ 撤销重做（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z，TipTap 原生 History 扩展）
-- ✅ 表格编辑（插入、删除行列、表头切换、右键上下文菜单）
-- ✅ 任务列表（复选框支持）
-- ✅ 代码高亮（30+ 编程语言）
-- ✅ 数学公式（KaTeX 支持 LaTeX）
-- ✅ 图表绘制（Mermaid 流程图、序列图等）
-- ✅ 表情符号选择器
-- ✅ 自动保存（localStorage）
-- ✅ 字数统计和字符计数
-- ✅ 查找替换功能
-- ✅ Markdown 导入/导出
-- ✅ 全屏编辑模式（F11 切换）
+| 功能 | 状态 | 实现细节 |
+|------|------|----------|
+| 三种编辑模式 | ✅ | 富文本编辑、实时预览、Markdown 源码 |
+| 图片上传 | ✅ | 拖拽、点击、剪贴板粘贴、模态框上传，10MB 限制 |
+| 附件管理 | ✅ | 支持 PDF/Word/Excel/视频/音频，50MB 限制，实时同步 |
+| 撤销重做 | ✅ | Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z，100 步历史记录 |
+| 表格编辑 | ✅ | 插入/删除行列、表头切换、右键上下文菜单 |
+| 任务列表 | ✅ | 复选框支持，可嵌套 |
+| 代码高亮 | ✅ | highlight.js，支持 30+ 编程语言 |
+| 数学公式 | ✅ | KaTeX，支持 LaTeX 语法（$inline$ 和 $$block$$） |
+| 图表绘制 | ✅ | Mermaid，流程图/序列图/甘特图/类图/状态图 |
+| 表情符号 | ✅ | emoji-picker-element 集成 |
+| 自动保存 | ✅ | localStorage 30 秒间隔自动备份 |
+| 字数统计 | ✅ | 实时显示字数和字符数 |
+| 查找替换 | ✅ | 全文搜索，支持区分大小写 |
+| Markdown 导入导出 | ✅ | Turndown.js + Marked.js |
+| 全屏编辑 | ✅ | F11 快捷键 |
+
+### API 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/upload/image` | POST | 上传图片（JPG/PNG/GIF/WebP/SVG） |
+| `/api/upload/attachment` | POST | 上传附件（文档/视频/音频） |
+| `/api/notes/{id}/attachments` | GET | 获取笔记附件列表 |
+| `/api/notes/{id}/attachments` | PUT | 更新笔记附件关联 |
+| `/api/attachments/{id}` | DELETE | 删除附件 |
+| `/api/preview` | POST | Markdown 转 HTML 预览 |
+
+### 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| Ctrl+Z | 撤销 |
+| Ctrl+Y / Ctrl+Shift+Z | 重做 |
+| Ctrl+B | 粗体 |
+| Ctrl+I | 斜体 |
+| Ctrl+K | 插入链接 |
+| Ctrl+F | 查找替换 |
+| F11 | 全屏编辑 |
+| Esc | 退出全屏/关闭弹窗 |
 
 ---
 
