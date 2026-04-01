@@ -11,6 +11,7 @@ class RichTextEditor {
         this.onImageUpload = options.onImageUpload || null;
         this.onImageUploadComplete = options.onImageUploadComplete || null;
         this.onAttachmentUpload = options.onAttachmentUpload || null;
+        this.onAttachmentChange = options.onAttachmentChange || null;
         this.editor = null;
         this.attachments = [];
         this.historyStack = [];
@@ -527,6 +528,10 @@ class RichTextEditor {
             }
             const attachment = await this.onAttachmentUpload(file);
             this.attachments.push(attachment);
+            if (this.onAttachmentChange) {
+                this.onAttachmentChange(this.attachments);
+            }
+            this.renderAttachments();
             this.insertAttachmentLink(attachment);
             if (typeof showToast === 'function') {
                 showToast('附件上传成功');
@@ -590,9 +595,17 @@ class RichTextEditor {
             btn.addEventListener('click', () => {
                 const id = parseInt(btn.dataset.id);
                 this.attachments = this.attachments.filter(a => a.id !== id);
+                if (this.onAttachmentChange) {
+                    this.onAttachmentChange(this.attachments);
+                }
                 this.renderAttachments();
             });
         });
+
+        // Notify external listeners about attachment list change
+        if (this.onAttachmentChange) {
+            this.onAttachmentChange(this.attachments);
+        }
     }
 
     getFileIcon(filename) {
@@ -824,11 +837,8 @@ class RichTextEditor {
     setHTML(html) {
         if (this.editor && typeof this.editor.commands?.setContent === 'function') {
             try {
-                this.editor.commands.setContent(html);
-                // Save initial state to history
-                if (this.historyStack.length === 0) {
-                    this.saveToHistory(html);
-                }
+                // TipTap's onUpdate will trigger saveToHistory, so we don't need to do it here
+                this.editor.commands.setContent(html, false);
             } catch (e) {
                 console.error('Error setting HTML to editor:', e);
             }

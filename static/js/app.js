@@ -649,6 +649,10 @@ function initRichTextEditor() {
         },
         onAttachmentUpload: async (file) => {
             return await uploadAttachment(file);
+        },
+        onAttachmentChange: (attachments) => {
+            currentAttachments = attachments;
+            renderAttachmentList();
         }
     });
     
@@ -1742,6 +1746,7 @@ async function handleInsertImage() {
                 }
                 
                 showToast('图片插入成功');
+                await renderAttachmentList();
                 toggleModal(elements.imageUploadModal, false);
                 fileInput.value = '';
             } catch (error) {
@@ -1792,6 +1797,7 @@ async function handleUploadAttachment() {
             }
             
             showToast('附件上传成功');
+            await renderAttachmentList();
             toggleModal(elements.attachmentUploadModal, false);
             fileInput.value = '';
         } catch (error) {
@@ -2260,6 +2266,51 @@ async function init() {
     
     // Initialize rich text editor
     initRichTextEditor();
+    
+    // Setup drop zones for upload modals
+    setupUploadDropZones();
+}
+
+// Setup drag and drop for upload modal drop zones
+function setupUploadDropZones() {
+    const dropZones = [
+        { zoneId: 'dropZone', inputId: 'imageFile' },
+        { zoneId: 'attachmentDropZone', inputId: 'attachmentFile' }
+    ];
+    
+    dropZones.forEach(({ zoneId, inputId }) => {
+        const zone = document.getElementById(zoneId);
+        const input = document.getElementById(inputId);
+        if (!zone || !input) return;
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            zone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        
+        zone.addEventListener('dragenter', () => {
+            zone.classList.add('drag-over');
+        });
+        
+        zone.addEventListener('dragleave', (e) => {
+            if (e.relatedTarget && !zone.contains(e.relatedTarget)) {
+                zone.classList.remove('drag-over');
+            }
+        });
+        
+        zone.addEventListener('drop', (e) => {
+            zone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                input.files = files;
+                // Trigger change event for any listeners
+                const event = new Event('change', { bubbles: true });
+                input.dispatchEvent(event);
+            }
+        });
+    });
 }
 
 // Start the app
