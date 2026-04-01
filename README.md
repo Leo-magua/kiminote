@@ -162,7 +162,9 @@ ai_notes_project/
 | Ctrl + B | 粗体 |
 | Ctrl + I | 斜体 |
 | Ctrl + K | 插入链接 |
-| Esc | 返回列表 / 关闭弹窗 |
+| Ctrl + F | 查找替换 |
+| F11 | 全屏编辑 |
+| Esc | 返回列表 / 关闭弹窗 / 退出全屏 |
 
 ## 🔌 API 接口
 
@@ -189,6 +191,7 @@ ai_notes_project/
 | POST | `/api/upload/image` | 上传图片 |
 | POST | `/api/upload/attachment` | 上传附件 |
 | GET | `/api/notes/{id}/attachments` | 获取附件列表 |
+| PUT | `/api/notes/{id}/attachments` | 更新笔记附件关联 |
 | DELETE | `/api/attachments/{id}` | 删除附件 |
 
 ### AI 功能

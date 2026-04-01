@@ -15,7 +15,7 @@
 | 富文本编辑器 | ✅ 完成 | TipTap.js 集成，支持三种编辑模式 |
 | 图片上传 | ✅ 完成 | 拖拽、点击、粘贴、模态框拖拽上传 |
 | 附件管理 | ✅ 完成 | 支持文档、视频、音频，实时同步附件列表 |
-| 撤销重做 | ✅ 完成 | 快捷键 + 工具栏 + 自定义历史栈 |
+| 撤销重做 | ✅ 完成 | 快捷键 + 工具栏 + TipTap 原生历史 |
 | AI 摘要 | ✅ 完成 | 自动生成笔记摘要 |
 | AI 标签 | ✅ 完成 | 自动生成标签 |
 | 智能搜索 | ✅ 完成 | 语义搜索 |
@@ -109,6 +109,8 @@ isort app/ tests/
 - summary, tags, current_version
 - created_at, updated_at
 
+**说明**：`content` 存储 Markdown 源码，`content_html` 存储富文本编辑器生成的 HTML，实现双模式内容持久化。
+
 # Attachment - 附件
 - id, note_id, user_id
 - filename, original_filename, file_path
@@ -170,10 +172,11 @@ isort app/ tests/
 ### 功能清单
 
 - ✅ 三种编辑模式（富文本/预览/Markdown）
-- ✅ 图片上传（拖拽、点击、粘贴）
-- ✅ 附件管理（支持文档、视频、音频）
-- ✅ 撤销重做（Ctrl+Z / Ctrl+Y）
-- ✅ 表格编辑（插入、删除行列、表头切换）
+- ✅ TipTap.js v2.2+ 核心集成（ProseMirror 驱动）
+- ✅ 图片上传（拖拽、点击、粘贴、URL 插入）
+- ✅ 附件管理（支持文档、视频、音频，50MB 上限）
+- ✅ 撤销重做（Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z，TipTap 原生 History 扩展）
+- ✅ 表格编辑（插入、删除行列、表头切换、右键上下文菜单）
 - ✅ 任务列表（复选框支持）
 - ✅ 代码高亮（30+ 编程语言）
 - ✅ 数学公式（KaTeX 支持 LaTeX）
@@ -183,6 +186,7 @@ isort app/ tests/
 - ✅ 字数统计和字符计数
 - ✅ 查找替换功能
 - ✅ Markdown 导入/导出
+- ✅ 全屏编辑模式（F11 切换）
 
 ---
 
