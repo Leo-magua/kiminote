@@ -370,6 +370,144 @@ class TestEditorFrontend:
         assert "richtexteditor" in content.lower() or "rich-text" in content.lower() or "editor.js" in content.lower(), "Rich text editor integration should be present"
 
 
+class TestEditorEndToEndWorkflow:
+    """Test complete rich text editor workflow end-to-end"""
+    
+    @pytest.fixture(scope="class")
+    def auth_token(self):
+        """Get authentication token for tests"""
+        return get_auth_token()
+    
+    def test_full_editor_workflow(self, auth_token):
+        """Test complete workflow: create note, upload image, upload attachment, associate, verify"""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # Step 1: Create a note with content_html (simulating TipTap editor save)
+        note_payload = {
+            "title": "富文本编辑器工作流测试",
+            "content": "# 工作流测试\n\n这是一个**富文本编辑器**的端到端测试。",
+            "content_html": "<h1>工作流测试</h1><p>这是一个<strong>富文本编辑器</strong>的端到端测试。</p>"
+        }
+        note_response = client.post("/api/notes", headers=headers, json=note_payload)
+        assert note_response.status_code == 200, f"Create note failed: {note_response.text}"
+        note_id = note_response.json()["id"]
+        assert note_response.json()["content_html"] == note_payload["content_html"]
+        
+        # Step 2: Upload an image
+        png_header = b'\x89PNG\r\n\x1a\n'
+        test_image = io.BytesIO(png_header + b'\x00\x00\x00\rIHDR' + b'\x00' * 100)
+        image_response = client.post(
+            "/api/upload/image",
+            headers=headers,
+            files={"file": ("workflow_image.png", test_image, "image/png")}
+        )
+        assert image_response.status_code == 200, f"Image upload failed: {image_response.text}"
+        image_data = image_response.json()
+        image_id = image_data["id"]
+        assert image_data["url"].startswith("/uploads/")
+        
+        # Step 3: Upload an attachment
+        test_doc = io.BytesIO(b"This is a test document for workflow validation.")
+        attachment_response = client.post(
+            "/api/upload/attachment",
+            headers=headers,
+            files={"file": ("workflow_doc.txt", test_doc, "text/plain")}
+        )
+        assert attachment_response.status_code == 200, f"Attachment upload failed: {attachment_response.text}"
+        attachment_data = attachment_response.json()
+        attachment_id = attachment_data["id"]
+        assert attachment_data["file_type"] == "document"
+        
+        # Step 4: Associate both image and attachment with the note
+        assoc_response = client.put(
+            f"/api/notes/{note_id}/attachments",
+            headers=headers,
+            json=[image_id, attachment_id]
+        )
+        assert assoc_response.status_code == 200, f"Associate attachments failed: {assoc_response.text}"
+        
+        # Step 5: Verify note attachments
+        get_attachments = client.get(f"/api/notes/{note_id}/attachments", headers=headers)
+        assert get_attachments.status_code == 200
+        attachments_list = get_attachments.json()
+        assert attachments_list["total"] == 2
+        attachment_ids = [a["id"] for a in attachments_list["attachments"]]
+        assert image_id in attachment_ids
+        assert attachment_id in attachment_ids
+        
+        # Step 6: Update note from editor (modify content_html)
+        update_payload = {
+            "title": "富文本编辑器工作流测试 - 已更新",
+            "content": "# 工作流测试\n\n已更新内容，包含图片和附件。",
+            "content_html": "<h1>工作流测试</h1><p>已更新内容，包含图片和附件。</p>"
+        }
+        update_response = client.put(f"/api/notes/{note_id}", headers=headers, json=update_payload)
+        assert update_response.status_code == 200
+        updated_note = update_response.json()
+        assert updated_note["content_html"] == update_payload["content_html"]
+        
+        # Step 7: Verify version history was created (undo/redo support via versions)
+        versions_response = client.get(f"/api/notes/{note_id}/versions", headers=headers)
+        assert versions_response.status_code == 200
+        versions_data = versions_response.json()
+        assert versions_data["total"] >= 2  # Create + Update
+        assert any(v["change_type"] == "create" for v in versions_data["versions"])
+        assert any(v["change_type"] == "edit" for v in versions_data["versions"])
+        
+        # Step 8: Cleanup - delete note (should also cleanup attachments)
+        delete_response = client.delete(f"/api/notes/{note_id}", headers=headers)
+        assert delete_response.status_code == 200
+        
+        # Step 9: Verify attachments are cleaned up
+        get_attachments_after = client.get(f"/api/notes/{note_id}/attachments", headers=headers)
+        # Note endpoint returns 404 because note is deleted
+        assert get_attachments_after.status_code == 404
+    
+    def test_undo_redo_version_history(self, auth_token):
+        """Test that saving notes creates version history supporting undo/redo workflow"""
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        
+        # Create note
+        create_payload = {
+            "title": "Version History Test",
+            "content": "Initial content.",
+            "content_html": "<p>Initial content.</p>"
+        }
+        create_resp = client.post("/api/notes", headers=headers, json=create_payload)
+        assert create_resp.status_code == 200
+        note_id = create_resp.json()["id"]
+        
+        # Save multiple times (simulating edit -> undo -> redo -> edit workflow)
+        for i in range(3):
+            update_payload = {
+                "content": f"Updated content v{i+1}.",
+                "content_html": f"<p>Updated content v{i+1}.</p>"
+            }
+            resp = client.put(f"/api/notes/{note_id}", headers=headers, json=update_payload)
+            assert resp.status_code == 200
+        
+        # Verify versions exist
+        versions_resp = client.get(f"/api/notes/{note_id}/versions", headers=headers)
+        assert versions_resp.status_code == 200
+        versions_data = versions_resp.json()
+        assert versions_data["total"] >= 4  # create + 3 edits
+        
+        # Test restore to a previous version (ultimate undo)
+        versions = versions_data["versions"]
+        earliest_version = versions[-1]  # Last in list is earliest due to desc ordering
+        restore_resp = client.post(
+            f"/api/notes/{note_id}/versions/{earliest_version['id']}/restore",
+            headers=headers
+        )
+        assert restore_resp.status_code == 200
+        restored_note = restore_resp.json()
+        assert restored_note["content"] == create_payload["content"]
+        assert restored_note["content_html"] == create_payload["content_html"]
+        
+        # Cleanup
+        client.delete(f"/api/notes/{note_id}", headers=headers)
+
+
 class TestContentHtmlStorage:
     """Test content_html dual-mode storage for rich text editor"""
     
