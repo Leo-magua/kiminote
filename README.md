@@ -230,6 +230,13 @@ pytest tests/test_collaboration.py -v
 - **数据库**: SQLite + SQLAlchemy
 - **前端**: 原生 HTML + CSS + JavaScript
 - **富文本编辑器**: TipTap.js v2.2+ (ProseMirror)
+  - 撤销重做: TipTap History 扩展
+  - 图片上传: 拖拽、粘贴、点击上传
+  - 附件管理: 支持多类型文件
+  - 表格编辑: 完整的表格操作
+  - 代码高亮: highlight.js 集成
+  - 数学公式: KaTeX 支持
+  - 图表绘制: Mermaid 支持
 - **Markdown**: Turndown.js + Marked.js
 - **代码高亮**: highlight.js
 - **数学公式**: KaTeX
