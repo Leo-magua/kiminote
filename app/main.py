@@ -6,7 +6,7 @@ import mimetypes
 import os
 import markdown
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 from fastapi import FastAPI, Body, Depends, File, HTTPException, Query, Request, Response, UploadFile, status, WebSocket
@@ -865,14 +865,14 @@ async def export_json(
     """Export all notes for current user as JSON"""
     notes = get_all_notes_for_export(db, user_id=current_user["id"])
     data = {
-        "export_date": datetime.utcnow().isoformat(),
+        "export_date": datetime.now(timezone.utc).isoformat(),
         "total_notes": len(notes),
         "user": current_user["username"],
         "notes": [note.to_dict() for note in notes]
     }
     
     # Save to file
-    export_path = EXPORTS_DIR / f"notes_export_{current_user['username']}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+    export_path = EXPORTS_DIR / f"notes_export_{current_user['username']}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
     with open(export_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     
@@ -961,7 +961,7 @@ async def export_markdown_all(
     
     md_content = f"# AI Notes Export\n\n"
     md_content += f"*User: {current_user['username']}*\n"
-    md_content += f"*Export Date: {datetime.utcnow().isoformat()}*\n"
+    md_content += f"*Export Date: {datetime.now(timezone.utc).isoformat()}*\n"
     md_content += f"*Total Notes: {len(notes)}*\n\n"
     md_content += "---\n\n"
     
@@ -975,7 +975,7 @@ async def export_markdown_all(
         md_content += f"---\n\n"
     
     # Save to file
-    export_path = EXPORTS_DIR / f"notes_export_{current_user['username']}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.md"
+    export_path = EXPORTS_DIR / f"notes_export_{current_user['username']}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.md"
     with open(export_path, "w", encoding="utf-8") as f:
         f.write(md_content)
     
@@ -1209,7 +1209,7 @@ async def update_share_settings(
     
     if update_data.expires_days is not None:
         from datetime import datetime, timedelta
-        kwargs["expires_at"] = datetime.utcnow() + timedelta(days=update_data.expires_days)
+        kwargs["expires_at"] = datetime.now(timezone.utc) + timedelta(days=update_data.expires_days)
     
     updated_share = update_share(db, token, current_user["id"], **kwargs)
     

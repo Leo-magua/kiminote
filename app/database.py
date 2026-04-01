@@ -1,12 +1,30 @@
 """
 Database models and operations for AI Notes - Share functionality
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from app.config import DATABASE_URL
+
+
+def now_utc():
+    """Get current UTC time as timezone-aware datetime"""
+    return datetime.now(timezone.utc)
+
+
+def is_aware(dt: datetime) -> bool:
+    """Check if a datetime is timezone-aware"""
+    return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None
+
+
+def to_aware(dt: datetime) -> datetime:
+    """Convert naive datetime to timezone-aware (assume UTC)"""
+    if is_aware(dt):
+        return dt
+    return dt.replace(tzinfo=timezone.utc)
+
 
 # Create engine and session
 engine = create_engine(
@@ -26,7 +44,7 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     notes = relationship("Note", back_populates="user")
@@ -54,8 +72,8 @@ class Note(Base):
     content_html = Column(Text, nullable=True)  # Rich text HTML content
     summary = Column(Text, nullable=True)
     tags = Column(String(500), nullable=True)  # Comma-separated tags
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Version control
     current_version = Column(Integer, default=1)  # Current version number
@@ -102,8 +120,8 @@ class Share(Base):
     expires_at = Column(DateTime, nullable=True)  # Expiration time (None = never expires)
     
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_accessed_at = Column(DateTime, nullable=True)
     
     # Relationships
@@ -112,7 +130,7 @@ class Share(Base):
     
     def is_expired(self) -> bool:
         """Check if share is expired"""
-        if self.expires_at and self.expires_at < datetime.utcnow():
+        if self.expires_at and to_aware(self.expires_at) < now_utc():
             return True
         return False
     
@@ -120,7 +138,7 @@ class Share(Base):
         """Check if share is still valid (active and not expired)"""
         if not self.is_active:
             return False
-        if self.expires_at and self.expires_at < datetime.utcnow():
+        if self.expires_at and to_aware(self.expires_at) < now_utc():
             return False
         if self.max_access and self.access_count >= self.max_access:
             return False
@@ -155,7 +173,7 @@ class UserSession(Base):
     session_id = Column(String(36), unique=True, nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_valid = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime, nullable=False)
     last_activity = Column(DateTime, nullable=True)
     ip_address = Column(String(45), nullable=True)
@@ -186,7 +204,7 @@ class NoteVersion(Base):
     change_type = Column(String(50), default="edit")  # create, edit, delete, restore
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     note = relationship("Note", back_populates="versions")
@@ -225,8 +243,8 @@ class NoteCollaborator(Base):
     added_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Relationships
     note = relationship("Note", back_populates="collaborators")
@@ -259,7 +277,7 @@ class CollaborationSession(Base):
     
     # User presence
     is_active = Column(Boolean, default=True)
-    last_activity = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Cursor position (for showing where user is editing)
     cursor_position = Column(Integer, nullable=True)
@@ -267,7 +285,7 @@ class CollaborationSession(Base):
     selection_end = Column(Integer, nullable=True)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     note = relationship("Note")
@@ -315,7 +333,7 @@ class Attachment(Base):
     url_path = Column(String(255), unique=True, nullable=False, index=True)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     note = relationship("Note")
@@ -444,7 +462,7 @@ def update_note(db: Session, note_id: int, user_id: int = None, **kwargs) -> Opt
         if key in allowed_fields and value is not None:
             setattr(db_note, key, value)
     
-    db_note.updated_at = datetime.utcnow()
+    db_note.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(db_note)
     return db_note
@@ -530,7 +548,7 @@ def create_share(
     # Calculate expiration
     expires_at = None
     if expires_days:
-        expires_at = datetime.utcnow() + timedelta(days=expires_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=expires_days)
     
     # Create share
     share = Share(
@@ -568,7 +586,7 @@ def verify_share_access(db: Session, token: str, password: str = None) -> Option
         return None
     
     # Check expiration
-    if share.expires_at and share.expires_at < datetime.utcnow():
+    if share.expires_at and to_aware(share.expires_at) < now_utc():
         return None
     
     # Check max access
@@ -585,7 +603,7 @@ def verify_share_access(db: Session, token: str, password: str = None) -> Option
     
     # Increment access count
     share.access_count += 1
-    share.last_accessed_at = datetime.utcnow()
+    share.last_accessed_at = datetime.now(timezone.utc)
     db.commit()
     
     # Get note
@@ -712,7 +730,7 @@ def increment_share_access_count(db: Session, share_token: str) -> bool:
         return False
     
     share.access_count += 1
-    share.last_accessed_at = datetime.utcnow()
+    share.last_accessed_at = datetime.now(timezone.utc)
     db.commit()
     return True
 
@@ -724,7 +742,7 @@ import uuid
 def create_session(db: Session, user_id: int, ip_address: str = None, user_agent: str = None, expires_days: int = 7) -> str:
     """Create a new session for a user and return the session token"""
     session_id = str(uuid.uuid4())
-    expires_at = datetime.utcnow() + timedelta(days=expires_days)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=expires_days)
     
     db_session = UserSession(
         session_id=session_id,
@@ -744,7 +762,7 @@ def get_session(db: Session, session_id: str) -> Optional[UserSession]:
     db_session = db.query(UserSession).filter(UserSession.session_id == session_id).first()
     if db_session:
         # Check if session is expired
-        if db_session.expires_at < datetime.utcnow():
+        if to_aware(db_session.expires_at) < now_utc():
             db_session.is_valid = False
             db.commit()
         return db_session if db_session.is_valid else None
@@ -756,7 +774,7 @@ def get_user_sessions(db: Session, user_id: int) -> List[UserSession]:
     return db.query(UserSession).filter(
         UserSession.user_id == user_id,
         UserSession.is_valid == True,
-        UserSession.expires_at > datetime.utcnow()
+        UserSession.expires_at > now_utc()
     ).all()
 
 
@@ -787,7 +805,7 @@ def delete_all_user_sessions(db: Session, user_id: int) -> int:
 def cleanup_expired_sessions(db: Session) -> int:
     """Clean up all expired sessions"""
     expired = db.query(UserSession).filter(
-        UserSession.expires_at < datetime.utcnow(),
+        UserSession.expires_at < now_utc(),
         UserSession.is_valid == True
     ).all()
     count = len(expired)
@@ -828,7 +846,7 @@ def get_notes_statistics(db: Session, user_id: int) -> dict:
     total_words = sum(len(note.content.split()) for note in notes)
     
     # Date calculations
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     week_start = now - timedelta(days=now.weekday())
     month_start = now.replace(day=1)
     
@@ -906,7 +924,7 @@ def get_notes_statistics(db: Session, user_id: int) -> dict:
 
 def get_daily_writing_stats(db: Session, user_id: int, days: int = 7) -> List[dict]:
     """Get daily writing statistics for the specified number of days"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     start_date = now - timedelta(days=days)
     
     # Get notes in date range
@@ -1032,7 +1050,7 @@ def restore_note_version(db: Session, note_id: int, version_id: int, user_id: in
     note.content_html = version.content_html
     note.summary = version.summary
     note.tags = version.tags
-    note.updated_at = datetime.utcnow()
+    note.updated_at = datetime.now(timezone.utc)
     
     # Create a new version for the restore action
     create_note_version(
@@ -1216,7 +1234,7 @@ def add_collaborator(
     if existing:
         # Update permission
         existing.permission = permission
-        existing.updated_at = datetime.utcnow()
+        existing.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(existing)
         return existing
@@ -1326,7 +1344,7 @@ def get_collaboration_session(db: Session, session_id: str) -> Optional[Collabor
 def get_active_collaborators(db: Session, note_id: int) -> List[CollaborationSession]:
     """Get all active collaboration sessions for a note"""
     # Clean up inactive sessions first (older than 5 minutes)
-    cutoff = datetime.utcnow() - timedelta(minutes=5)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
     db.query(CollaborationSession).filter(
         CollaborationSession.note_id == note_id,
         CollaborationSession.last_activity < cutoff
@@ -1361,7 +1379,7 @@ def update_collaboration_session(
     if selection_end is not None:
         session.selection_end = selection_end
     
-    session.last_activity = datetime.utcnow()
+    session.last_activity = datetime.now(timezone.utc)
     db.commit()
     db.refresh(session)
     return session
@@ -1383,7 +1401,7 @@ def deactivate_collaboration_session(db: Session, session_id: str) -> bool:
 
 def cleanup_inactive_sessions(db: Session, inactive_minutes: int = 30) -> int:
     """Clean up inactive collaboration sessions"""
-    cutoff = datetime.utcnow() - timedelta(minutes=inactive_minutes)
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=inactive_minutes)
     
     sessions = db.query(CollaborationSession).filter(
         CollaborationSession.is_active == True,
@@ -1452,7 +1470,7 @@ def merge_changes(
     if "tags" in changes:
         note.tags = changes["tags"]
     
-    note.updated_at = datetime.utcnow()
+    note.updated_at = datetime.now(timezone.utc)
     
     # Create a new version
     create_note_version(

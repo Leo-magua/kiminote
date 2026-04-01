@@ -3,7 +3,7 @@ WebSocket handling for real-time collaboration in AI Notes
 """
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set
 from fastapi import WebSocket, WebSocketDisconnect, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -137,7 +137,7 @@ class CollaborationManager:
         if note_id not in self.active_connections:
             return
         
-        message["timestamp"] = datetime.utcnow().isoformat()
+        message["timestamp"] = datetime.now(timezone.utc).isoformat()
         
         # Send to all connected clients
         disconnected = []
@@ -355,7 +355,7 @@ async def handle_websocket(websocket: WebSocket, note_id: int, db: Session):
                     # Respond to ping
                     await websocket.send_json({
                         "type": "pong",
-                        "data": {"timestamp": datetime.utcnow().isoformat()}
+                        "data": {"timestamp": datetime.now(timezone.utc).isoformat()}
                     })
                 
                 elif msg_type == "typing_start":
